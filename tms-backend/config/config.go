@@ -50,7 +50,4 @@ func LoadConfig() {
 		PostgresPassword: viper.GetString("POSTGRES_PASSWORD"),
 		PostgresDB:       viper.GetString("POSTGRES_DB"),
 	}
-
-	
-
 }

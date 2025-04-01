@@ -8,7 +8,7 @@ import (
 type Theme struct {
 	gorm.Model
 	Name string `gorm:"type:varchar(255);not null"`
-	Type global.ThemeType `gorm:"type:enum('standard', 'auditrakkr');default:'standard'" json:"type"`
+	Type global.ThemeType `gorm:"type:theme_type;default:'standard'" json:"type"`
 	Description string `gorm:"type:text"`
 	Properties string `gorm:"type:jsonb"`
 	Tenants []Tenant `gorm:"many2many:tenant_themes;"`

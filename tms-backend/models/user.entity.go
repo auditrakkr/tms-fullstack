@@ -8,9 +8,9 @@ import (
 )
 
 type Phone struct {
-	Mobile []string
-	Home   []string
-	Office []string
+	Mobile []string `json:"mobile"`
+	Home   []string `json:"home"`
+	Office []string `json:"office"`
 }
 
 type User struct {
@@ -21,7 +21,7 @@ type User struct {
 	LastName string `gorm:"type:varchar(255);not null"`
 	CommonName string `gorm:"type:varchar(255)"`
 	HomeAddress string
-	Gender global.Gender `gorm:"type:enum('male', 'female')"`
+	Gender global.Gender `gorm:"type:gender"`
 	DateOfBirth time.Time `gorm:"type:date"`
 	Nationality string        
 	StateOfOrigin string        
