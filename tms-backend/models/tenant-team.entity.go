@@ -11,7 +11,7 @@ type TenantTeam struct {
 	UserID uint
 	Tenant Tenant `gorm:"constraint:OnDelete:CASCADE"`
 	User User `gorm:"constraint:OnDelete:CASCADE"`
-	Roles []global.TenantTeamRole
+	Roles []global.TenantTeamRole `gorm:"type:tenant_team_role[]"`
     //  Denormalizing tenant unique name for efficiency of access for display on the client side 
 	TenantUniqueName string
 	//  Denormalizing tenant unique ID for efficiency of access on the client side

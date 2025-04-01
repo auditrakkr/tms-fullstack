@@ -16,7 +16,7 @@ type Tenant struct {
 	MoreInfo string `gorm:"type:text"`
 	Logo string `gorm:"type:varchar(255)"`
 	LogoMimeType string `gorm:"type:varchar(255)"`
-	Status global.TenantStatus `gorm:"type:enum('active', 'suspended', 'owing');default:'active'" json:"status"`
+	Status global.TenantStatus `gorm:"type:tenant_status;default:'active'" json:"status"`
 	Active bool `gorm:"default:false"`
 	
 	PrimaryContactID uint
