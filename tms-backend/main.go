@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+
 func main() {
 	// Initialize the application
 	// app := config.NewApp()
@@ -26,6 +27,17 @@ func main() {
 
 	r := gin.Default()
 	port :="8080"
+
+	// Define your routes here
+	r.GET("/", func(c *gin.Context) {
+		c.JSON(200, gin.H{
+			"message": "Hello, World!",
+		})
+	})
+
+	// Setup tenant routes
+	SetupTenantRoutes(r)
+
 	r.Run(":" + port)
 	fmt.Println("Server running on port", port)
 }

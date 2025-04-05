@@ -1,10 +1,10 @@
 services:
-  tms-database:
+  tms-db:
     image: postgres:latest
-    container_name: tms-database
+    container_name: tms-db
     ports:
       - "5432:5432"
     volumes:
-      - /home/somanwokoye/data/postgres:/var/lib/postgresql/data
+      - /home/somanwokoye/data/postgres:/data/postgres
     env_file:
       - docker.env
