@@ -34,11 +34,11 @@ var AppConfigFilePath string
 func LoadConfig() {
 	err := godotenv.Load()
 	if err != nil {
-		log.Println("Error loading .env file")	
+		log.Println("Error loading .env file")
 	}
-	
+
 	viper.AutomaticEnv()
-	
+
 
 	// Load the configuration from a file or environment variables
 	// and populate the AppConfig variable.

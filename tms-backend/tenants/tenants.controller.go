@@ -62,12 +62,6 @@ func (tc *TenantController) GetAllTenants(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"tenants": tenants})
 }
 
-func GetTenantByID(c *gin.Context) {
-	// Logic to get a tenant by ID
-	id := c.Param("id")
-	c.JSON(http.StatusOK, gin.H{"message": "Get tenant by ID", "id": id})
-}
-
 func (tc *TenantController) FindOne(c *gin.Context) {
 	// Convert id to uint
 	id, err := strconv.ParseUint(c.Params.ByName("id"), 10, 32)
@@ -126,4 +120,29 @@ func (tc *TenantController) DeleteTenant(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "Tenant deleted successfully"})
 	//c.JSON(http.StatusOK, gin.H{"message": "Tenant deleted", "id": id})
+}
+
+
+/* UPDATE */
+func (tc *TenantController) UpdateTenant(c *gin.Context) {
+	// Convert id to uint
+	id, err := strconv.ParseUint(c.Params.ByName("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid tenant ID"})
+		return
+	}
+
+	var updateTenantDto dto.UpdateTenantDto
+	if err := c.ShouldBindJSON(&updateTenantDto); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request payload"})
+		return
+	}
+
+	tenant, err := tc.tenantService.Update(uint(id), &updateTenantDto)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"tenant": tenant})
+	c.JSON(http.StatusOK, gin.H{"message": "Tenant updated successfully"})
 }

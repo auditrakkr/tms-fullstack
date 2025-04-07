@@ -10,7 +10,7 @@ services:
       - docker.env
 
   es01:
-    image: elasticsearch:8.10.0
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.10.0
     container_name: es01
     environment:
       - discovery.type=single-node
@@ -26,7 +26,7 @@ services:
     #   - data/es01:/usr/share/elasticsearch/data
 
   redis-master:
-    image: redis:latest
+    image: redis:alpine
     container_name: redis-master
     ports:
       - "6379:6379"
@@ -37,7 +37,7 @@ services:
       - /home/somanwokoye/data/redis:/var/lib/redis
 
   redis-slave:
-    image: redis:latest
+    image: redis:alpine
     ports:
       - "6379"
     environment:

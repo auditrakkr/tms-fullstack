@@ -3,6 +3,7 @@ package tenants
 import (
 	"fmt"
 	"net/http"
+	"sync"
 
 	"github.com/auditrakkr/tms-fullstack/tms-backend/database"
 	"github.com/auditrakkr/tms-fullstack/tms-backend/dtos"
@@ -10,6 +11,7 @@ import (
 	"github.com/auditrakkr/tms-fullstack/tms-backend/regions"
 	"github.com/auditrakkr/tms-fullstack/tms-backend/repositories"
 	"github.com/gin-gonic/gin"
+	"github.com/redis/go-redis/v9"
 )
 
 //initialize the repositories for Tenant
@@ -36,6 +38,7 @@ type TenantService struct {
 	regionService  *regions.RegionService
 	tenantTeamRepo repositories.Repository[models.TenantTeam]
 	userRepo       repositories.Repository[models.User]
+	redisClients   sync.Map
 }
 
 // NewTenantService creates a new instance of TenantService
@@ -45,6 +48,8 @@ func NewTenantService() *TenantService {
 		regionRepo:    repositories.Repository[models.Region]{DB: database.DB},
 		regionService: regions.NewRegionService(),
 		userRepo: repositories.Repository[models.User]{DB: database.DB},
+		tenantTeamRepo: repositories.Repository[models.TenantTeam]{DB: database.DB},
+		redisClients: sync.Map{},
 	}
 }
 
@@ -223,3 +228,21 @@ func (s *TenantService) FindTenantsByRegionName(regionName string) (*[]models.Te
 }
 
 
+
+
+
+/* Redis */
+
+func (s *TenantService) getRedisClient(name string, redisProperties redis.Options) (*redis.Client, error) {
+	client, ok := s.redisClients.Load(name)
+	if ok {
+		return client.(*redis.Client), nil
+	}
+
+	newClient := redis.NewClient(&redisProperties)
+	s.redisClients.Store(name, newClient)
+	if newClient == nil {
+		return nil, fmt.Errorf("failed to create Redis client: %d %s", http.StatusBadRequest, http.StatusText(http.StatusBadRequest))
+	}
+	return newClient, nil
+}

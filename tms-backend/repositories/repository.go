@@ -18,8 +18,9 @@ func NewRepository[T any](db *gorm.DB) *Repository[T] {
 }
 
 // Create a new record
-func (r *Repository[T]) Create(entity *T) error {
-	return r.DB.Create(&entity).Error
+func (r *Repository[T]) Create(entity *T) (*T, error) {
+	err := r.DB.Create(&entity).Error
+	return entity, err
 }
 
 // Find a record by ID

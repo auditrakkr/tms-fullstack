@@ -34,3 +34,13 @@ const (
 	SuperAdmin	TenantRoles = "super_admin"
 	User	TenantRoles = "user"
 )
+
+
+const APP_NAME = "TMS"
+const APP_VERSION = "1.0.0"
+const APP_DESCRIPTION = "Tenant Management System"
+const API_VERSION = "v1"
+const API_BASE_URL = "/api/v1"
+const USE_API_VERSION_IN_URL = true
+const AUTO_SEND_CONFIRM_EMAIL = true
+const AUTO_SEND_WELCOME_EMAIL = true
