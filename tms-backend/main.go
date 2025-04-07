@@ -26,6 +26,7 @@ func main() {
 	// server.Start()
 
 	r := gin.Default()
+	r.LoadHTMLGlob("./views/*")
 	port :="8080"
 
 	// Define your routes here

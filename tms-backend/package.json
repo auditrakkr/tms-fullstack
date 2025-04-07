@@ -1,0 +1,14 @@
+{
+  "scripts": {
+    "build:css": "NODE_ENV=production postcss assets/sass/themes/tms.scss -o assets/dist/tms.css",
+    "watch:css": "postcss assets/sass/themes/tms.scss -o assets/dist/tms.css --watch"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.1",
+    "autoprefixer": "^10.4.14",
+    "cssnano": "^6.0.1",
+    "postcss": "^8.4.21",
+    "postcss-cli": "^10.1.0",
+    "sass": "^1.69.5"
+  }
+}
