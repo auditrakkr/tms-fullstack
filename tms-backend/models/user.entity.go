@@ -1,6 +1,9 @@
 package models
 
 import (
+	"database/sql/driver"
+	"encoding/json"
+	"errors"
 	"time"
 
 	"github.com/auditrakkr/tms-fullstack/tms-backend/global"
@@ -13,6 +16,21 @@ type Phone struct {
 	Office []string `json:"office"`
 }
 
+// Scan implements the sql.Scanner interface for deserializing JSONB from the database
+func (p *Phone) Scan(value interface{}) error {
+	bytes, ok := value.([]byte)
+	if !ok {
+		return errors.New("type assertion to []byte failed")
+	}
+
+	return json.Unmarshal(bytes, p)
+}
+
+// Value implements the driver.Valuer interface for serializing to JSONB in the database
+func (p Phone) Value() (driver.Value, error) {
+	return json.Marshal(p)
+}
+
 type User struct {
 	gorm.Model
 	Landlord bool `gorm:"default:false"`
@@ -23,8 +41,8 @@ type User struct {
 	HomeAddress string
 	Gender global.Gender `gorm:"type:gender"`
 	DateOfBirth time.Time `gorm:"type:date"`
-	Nationality string        
-	StateOfOrigin string        
+	Nationality string
+	StateOfOrigin string
 	ZipCode string
 
 	/* Photos Upload
@@ -61,7 +79,7 @@ type User struct {
 	OTPSecret string
 
 	//Todo: Incorporate the user's role in the system
-	
+
 
 	PrimaryContactForTenants []Tenant `gorm:"foreignKey:PrimaryContactID"`
 

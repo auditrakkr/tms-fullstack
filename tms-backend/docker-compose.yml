@@ -1,10 +1,54 @@
 services:
-  tms-database:
+  tms-db:
     image: postgres:latest
-    container_name: tms-database
+    container_name: tms-db
     ports:
       - "5432:5432"
     volumes:
-      - /home/somanwokoye/data/postgres:/var/lib/postgresql/data
+      - /home/somanwokoye/data/postgres:/data/postgres
     env_file:
       - docker.env
+
+  es01:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.10.0
+    container_name: es01
+    environment:
+      - discovery.type=single-node
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - "ELASTIC_PASSWORD=admin"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    ports:
+      - "9200:9200"
+    # volumes:
+    #   - data/es01:/usr/share/elasticsearch/data
+
+  redis-master:
+    image: redis:alpine
+    container_name: redis-master
+    ports:
+      - "6379:6379"
+    environment:
+      - REDIS_REPLICATION_MODE=master
+      - REDIS_PASSWORD=my_master_password
+    volumes:
+      - /home/somanwokoye/data/redis:/var/lib/redis
+
+  redis-slave:
+    image: redis:alpine
+    ports:
+      - "6379"
+    environment:
+      - REDIS_REPLICATION_MODE=slave
+      - REDIS_MASTER_HOST=redis-master
+      - REDIS_MASTER_PORT=6379
+      - REDIS_MASTER_PASSWORD=my_master_password
+      - REDIS_PASSWORD=my_slave_password
+    depends_on:
+      - redis-master
+
+networks:
+  tms-db:
+    driver: bridge

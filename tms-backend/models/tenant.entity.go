@@ -1,6 +1,7 @@
 package models
 
 import (
+	dto "github.com/auditrakkr/tms-fullstack/tms-backend/dtos"
 	"github.com/auditrakkr/tms-fullstack/tms-backend/global"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -18,7 +19,7 @@ type Tenant struct {
 	LogoMimeType string `gorm:"type:varchar(255)"`
 	Status global.TenantStatus `gorm:"type:tenant_status;default:'active'" json:"status"`
 	Active bool `gorm:"default:false"`
-	
+
 	PrimaryContactID uint
 	PrimaryContact User
 
@@ -36,6 +37,32 @@ type Tenant struct {
 	RegionName string `gorm:"type:varchar(255)"` //denormalized region unique name called getTenantsByRegionName in tenants service
 
 	RegionRootDomain string `gorm:"type:varchar(255)"` //denomalized so as to set up unique index with tenant name. So tenantName.rootDomainName cannot be the repeated
-	
 
+
+}
+
+func (t *Tenant) MapFromCreateTenantDto(dto *dto.CreateTenantDto) error {
+    if dto.Name != "" {
+        t.Name = dto.Name
+    }
+    if dto.Address != "" {
+        t.Address = dto.Address
+    }
+    if dto.MoreInfo != nil {
+        t.MoreInfo = *dto.MoreInfo
+    }
+    if dto.Logo != nil {
+        t.Logo = *dto.Logo
+    }
+    if dto.LogoMimeType != nil {
+        t.LogoMimeType = *dto.LogoMimeType
+    }
+    if dto.Status != nil {
+        t.Status = *dto.Status
+    }
+    if dto.RegionName != "" {
+        t.RegionName = dto.RegionName
+    }
+
+    return nil
 }
