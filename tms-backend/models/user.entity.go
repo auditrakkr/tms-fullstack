@@ -59,7 +59,7 @@ type User struct {
 	// PhotoOriginalURL string `gorm:"type:varchar(255)"`
 	IsActive bool `gorm:"default:true"`
 
-	PrimaryEmailAddress string `gorm:"unique;not null"`
+	PrimaryEmailAddress string `gorm:"uniqueIndex;not null"`
 	BackupEmailAddress string `gorm:"unique"`
 
 	PhoneNumbers Phone `gorm:"type:jsonb"`
@@ -75,13 +75,34 @@ type User struct {
 	EmailVerificationTokenExpiration time.Time
 
 	// Incorporating OTP possibly for 2FA
-	OTPEnabled bool `gorm:"default:false;not null"`
+	OTPEnabled *bool `gorm:"default:false;not null"`
 	OTPSecret string
 
 	//Todo: Incorporate the user's role in the system
-
+	Roles []Role `gorm:"many2many:user_roles;"`
 
 	PrimaryContactForTenants []Tenant `gorm:"foreignKey:PrimaryContactID"`
 
 	TenantTeamMemberships []TenantTeam `gorm:"foreignKey:UserID"`
+
+	AccountOfficerForWhichTenants []TenantAccountOfficer `gorm:"foreignKey:UserID"`
+
+	/** for refresh token save after successful login*/
+	RefreshTokenHash string `gorm:"type:varchar(255)"`
+
+	FacebookProfile FacebookProfile
+	GoogleProfile GoogleProfile
+
+}
+
+
+func (u *User) Sanitize() {
+    u.PasswordHash = ""
+    u.PasswordSalt = ""
+    u.ResetPasswordToken = ""
+    u.PrimaryEmailVerificationToken = ""
+    u.BackupEmailVerificationToken = ""
+    u.EmailVerificationTokenExpiration = time.Time{}
+    u.OTPSecret = ""
+    u.OTPEnabled = nil
 }

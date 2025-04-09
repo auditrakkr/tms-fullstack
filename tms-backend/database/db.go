@@ -16,7 +16,7 @@ func ConnectDB() {
 	cfg := config.AppConfig
 
 	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%d sslmode=disable",
-		cfg.PostgresHost, cfg.PostgresUser, cfg.PostgresPassword, cfg.PostgresDB, cfg.PostgresPort)
+		cfg.Postgres.Host, cfg.Postgres.User, cfg.Postgres.Password, cfg.Postgres.DB, cfg.Postgres.Port)
 
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
@@ -68,10 +68,13 @@ func ConnectDB() {
 		&models.TenantAccountOfficer{},
 		&models.TenantConfigDetail{},
 		&models.TenantTeam{},
-		&models.Theme{}); err != nil {
+		&models.Theme{},
+		&models.FacebookProfile{},
+		&models.GoogleProfile{},
+		); err != nil {
 		log.Fatalf("Failed to migrate database: %v", err)
 	}
 
-	
+
 	log.Println("Connected to PostgreSQL database successfully")
 }

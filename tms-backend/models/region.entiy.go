@@ -6,7 +6,7 @@ import (
 
 type Region struct {
     gorm.Model
-    Name string `gorm:"type:varchar(255);not null;unique"`
+    Name string `gorm:"type:varchar(255);not null;index;unique"`
     RootDomainName string `gorm:"type:varchar(255);not null"`
     Description *string `gorm:"type:text"`
     Country *string `gorm:"type:varchar(255)"`

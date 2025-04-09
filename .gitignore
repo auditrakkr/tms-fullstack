@@ -21,5 +21,27 @@
 go.work
 go.work.sum
 
+# node.js
+#
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Yarn
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
+
+
 # env file
 .env
+docker.env
+example.env
+
+*.exe
+*.dll
+*.so
+tms-backend/tms-backend
