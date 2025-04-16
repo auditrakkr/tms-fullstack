@@ -11,7 +11,7 @@ type Tenant struct {
 	gorm.Model
 	UUID uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();unique;not null"`
 	Name string `gorm:"type:varchar(255);not null"`
-	Subdomain string `gorm:"type:varchar(255);unique;not null"`
+	Subdomain string `gorm:"type:varchar(255);uniqueIndex:idx_subdomain_region;not null"`
 	CustomURLSlug string `gorm:"type:varchar(255);unique"`
 	Address string `gorm:"type:varchar(255)"`
 	MoreInfo string `gorm:"type:text"`
@@ -36,7 +36,7 @@ type Tenant struct {
 	TenantConfigDetail TenantConfigDetail
 	RegionName string `gorm:"type:varchar(255)"` //denormalized region unique name called getTenantsByRegionName in tenants service
 
-	RegionRootDomain string `gorm:"type:varchar(255)"` //denomalized so as to set up unique index with tenant name. So tenantName.rootDomainName cannot be the repeated
+	RegionRootDomain string `gorm:"type:varchar(255);uniqueIndex:idx_subdomain_region"` //denomalized so as to set up unique index with tenant name. So tenantName.rootDomainName cannot be the repeated
 
 
 }

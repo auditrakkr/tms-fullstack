@@ -25,7 +25,7 @@ func (uc *UserController) CreateUser(c *gin.Context) {
 	if err := c.ShouldBindJSON(&createUserDto); err != nil {
 		c.JSON(400, gin.H{"error": "Invalid request payload"})
 	}
-	user, err := uc.userService.CreateUser(&createUserDto)
+	user, err := uc.userService.CreateUser(c, &createUserDto)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 	}

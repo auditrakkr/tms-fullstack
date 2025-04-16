@@ -5,12 +5,16 @@ import (
 	"github.com/auditrakkr/tms-fullstack/tms-backend/roles"
 	tenantconfigdetails "github.com/auditrakkr/tms-fullstack/tms-backend/tenant-config-details"
 	"github.com/auditrakkr/tms-fullstack/tms-backend/tenants"
+	"github.com/auditrakkr/tms-fullstack/tms-backend/tenants/billings"
+	"github.com/auditrakkr/tms-fullstack/tms-backend/tenants/themes"
 	"github.com/auditrakkr/tms-fullstack/tms-backend/users"
 	"github.com/gin-gonic/gin"
 )
 
 func SetupTenantRoutes(router *gin.Engine) {
 	tenantController := tenants.NewTenantController(tenants.NewTenantService())
+	themeController := themes.NewThemeController(themes.NewThemeService())
+	billingController := billings.NewBillingController(billings.NewBillingService())
 
 	tenantGroup := router.Group("/tenants")
 	{
@@ -20,9 +24,10 @@ func SetupTenantRoutes(router *gin.Engine) {
 		tenantGroup.POST("/", tenantController.CreateTenant)
 		tenantGroup.DELETE("/:id", tenantController.DeleteTenant)
 		tenantGroup.PATCH("/:id", tenantController.UpdateTenant)
-		/* tenantGroup.POST("/", createTenant)
-		tenantGroup.PUT("/:id", updateTenant)
-		tenantGroup.DELETE("/:id", deleteTenant) */
+		tenantGroup.POST("/themes", themeController.CreateTheme)
+		tenantGroup.GET("/themes", themeController.FindAll)
+		tenantGroup.POST("/billings", billingController.CreateBilling)
+		tenantGroup.GET("/billings", billingController.FindAll)
 	}
 
 
