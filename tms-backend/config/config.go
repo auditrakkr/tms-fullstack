@@ -20,9 +20,12 @@ type Config struct {
 		DB       string
 		SSLMode  *string
 	}
-	RedisHost        *string
-	RedisPort        *int
-	RedisPassword    *string
+	// Redis configuration
+	Redis struct {
+		Host     string
+		Port     string
+		Password string
+	}
 	Elasticsearch    *struct {
 		Node     *string
 		Username *string
@@ -61,36 +64,27 @@ func LoadConfig() {
 	// Load the configuration from a file or environment variables
 	// and populate the AppConfig variable.
 	// This is just a placeholder implementation.
-	AppConfig = &Config{
-		Postgres: struct {
-			Host     string
-			Port     int
-			User     string
-			Password string
-			DB       string
-			SSLMode  *string
-		}{
-			Host:     viper.GetString("POSTGRES_HOST"),
-			Port:     viper.GetInt("POSTGRES_PORT"),
-			User:     viper.GetString("POSTGRES_USER"),
-			Password: viper.GetString("POSTGRES_PASSWORD"),
-			DB:       viper.GetString("POSTGRES_DB"),
-			SSLMode:  nil,
-		},
-		JWT: struct {
-			Secret                   string
-			SecretKeyExpiration      int
-			RefreshSecret            string
-			RefreshSecretKeyExpiration int
-		}{
-			Secret:                   viper.GetString("SECRET_KEY"),
-			SecretKeyExpiration:      viper.GetInt("SECRET_KEY_EXPIRATION"),
-			RefreshSecret:            viper.GetString("REFRESH_SECRET"),
-			RefreshSecretKeyExpiration: viper.GetInt("REFRESH_SECRET_KEY_EXPIRATION"),
-		},
+	AppConfig = &Config{}
 
-	}
+	// PostgreSQL configuration
+	AppConfig.Postgres.Host = viper.GetString("POSTGRES_HOST")
+	AppConfig.Postgres.Port = viper.GetInt("POSTGRES_PORT")
+	AppConfig.Postgres.User = viper.GetString("POSTGRES_USER")
+	AppConfig.Postgres.Password = viper.GetString("POSTGRES_PASSWORD")
+	AppConfig.Postgres.DB = viper.GetString("POSTGRES_DB")
 
+	// Redis configuration
+	AppConfig.Redis.Host = viper.GetString("REDIS_HOST")
+	AppConfig.Redis.Port = viper.GetString("REDIS_PORT")
+	AppConfig.Redis.Password = viper.GetString("REDIS_PASSWORD")
+
+	// JWT configuration
+	AppConfig.JWT.Secret = viper.GetString("SECRET_KEY")
+	AppConfig.JWT.SecretKeyExpiration = viper.GetInt("SECRET_KEY_EXPIRATION")
+	AppConfig.JWT.RefreshSecret = viper.GetString("REFRESH_SECRET")
+	AppConfig.JWT.RefreshSecretKeyExpiration = viper.GetInt("REFRESH_SECRET_KEY_EXPIRATION")
+
+	// Configure OAuth2 for Google and Facebook
 	GoogleOAuthConfig = &oauth2.Config{
 		ClientID:     viper.GetString("GOOGLE_CLIENT_ID"),
 		ClientSecret: viper.GetString("GOOGLE_CLIENT_SECRET"),

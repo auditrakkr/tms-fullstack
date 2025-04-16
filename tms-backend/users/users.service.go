@@ -10,6 +10,7 @@ import (
 	"github.com/auditrakkr/tms-fullstack/tms-backend/models"
 	"github.com/auditrakkr/tms-fullstack/tms-backend/repositories"
 	"github.com/auditrakkr/tms-fullstack/tms-backend/search"
+	"github.com/gin-gonic/gin"
 
 	"github.com/jinzhu/copier"
 	"golang.org/x/crypto/bcrypt"
@@ -44,7 +45,7 @@ func NewUserService() *UserService {
 
 /* Create  */
 
-func (s *UserService) CreateUser(createUserDto *dto.CreateUserDto) (*models.User, error) {
+func (s *UserService) CreateUser(ctx *gin.Context, createUserDto *dto.CreateUserDto) (*models.User, error) {
 	newUser := &models.User{}
 	if err := copier.Copy(newUser, createUserDto); err != nil {
 		return nil, fmt.Errorf("failed to map dto: %v", err)
