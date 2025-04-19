@@ -1,19 +1,40 @@
 <!DOCTYPE html>
-<!--html class="has-navbar-fixed-top"-->
-<!--see https://bulma.io/documentation/components/navbar/#fixed-navbar-->
-<html>
-{%include "head.html" %}
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ .title }}</title>
 
-<body class="layout-documentation page-layout">
-  {# Comment: The extra styled div here below is to force footer to always be at the bottom 
-      even if content is not much. See https://philipwalton.github.io/solved-by-flexbox/demos/sticky-footer/
-      In addition, remember to put a section always for main contain between navigation and footer with flex: 1
-      
-  #}
-  <div style="display: flex; min-height: 100vh; flex-direction: column;">
-    {% block body %}
-    {% endblock body %}
+  <!-- Tailwind CSS -->
+  <link id="theme-stylesheet" href="/assets/light-theme.css" rel="stylesheet">
+
+  <!-- Custom styles -->
+  <style>
+    /* Any additional custom styles can go here */
+  </style>
+
+  {% block head %}{% endblock %}
+</head>
+
+<body class="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+  <!-- Main content wrapper with flex to push footer to bottom -->
+  <div class="flex flex-col min-h-screen">
+    {% block body %}{% endblock %}
   </div>
-</body>
 
+  <!-- Scripts -->
+  <script>
+    // Check for saved theme preference
+    document.addEventListener('DOMContentLoaded', function() {
+      const savedTheme = localStorage.getItem('theme');
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+      if(savedTheme === 'dark' || (!savedTheme && prefersDark)) {
+        document.documentElement.classList.add('dark');
+        document.getElementById('theme-stylesheet').href = '/assets/dark-theme.css';
+      }
+    });
+  </script>
+  {% block scripts %}{% endblock %}
+</body>
 </html>
