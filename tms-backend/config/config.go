@@ -83,7 +83,6 @@ func LoadConfig() {
 	AppConfig.JWT.SecretKeyExpiration = viper.GetInt("SECRET_KEY_EXPIRATION")
 	AppConfig.JWT.RefreshSecret = viper.GetString("REFRESH_SECRET")
 	AppConfig.JWT.RefreshSecretKeyExpiration = viper.GetInt("REFRESH_SECRET_KEY_EXPIRATION")
-
 	// Configure OAuth2 for Google and Facebook
 	GoogleOAuthConfig = &oauth2.Config{
 		ClientID:     viper.GetString("GOOGLE_CLIENT_ID"),
@@ -102,4 +101,5 @@ func LoadConfig() {
 		Scopes:       []string{"email", "public_profile"},
 		Endpoint:     facebook.Endpoint,
 	}
+
 }

@@ -1,5 +1,10 @@
 package global
 
+import (
+	"time"
+)
+
+
 type TenantStatus string
 
 const (
@@ -39,6 +44,8 @@ const (
 	User       TenantRoles = "user"
 )
 
+const PROTOCOL = "https"
+
 const (
 	APP_NAME                = "TMS"
 	APP_VERSION             = "1.0.0"
@@ -48,4 +55,12 @@ const (
 	USE_API_VERSION_IN_URL  = true
 	AUTO_SEND_CONFIRM_EMAIL = true
 	AUTO_SEND_WELCOME_EMAIL = true
+)
+
+
+const (
+	UPLOAD_DIRECTORY              = "uploads"
+	PHOTO_FILE_SIZE_LIMIT         = 2 * 1024 * 1024 // 2MB
+	PASSWORD_RESET_EXPIRATION     = 24 * time.Hour  // 24 hours
+	EMAIL_VERIFICATION_EXPIRATION = 48 * time.Hour  // 48 hours
 )
