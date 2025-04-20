@@ -7,14 +7,15 @@ import (
 
 	"github.com/auditrakkr/tms-fullstack/tms-backend/config"
 	"github.com/auditrakkr/tms-fullstack/tms-backend/models"
-	"github.com/go-redis/redis/v8"
+	"github.com/redis/go-redis/v9"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
 var (
 	DB *gorm.DB
-	Cache *redis.Client
+	Redis *redis.Client
+	Cache *RedisCache
 	ctx = context.Background()
 )
 
@@ -33,20 +34,23 @@ func ConnectDB() {
     DB = db
 
 	//Connect to Redis for caching
-	Cache = redis.NewClient(&redis.Options{
+	Redis  = redis.NewClient(&redis.Options{
 		Addr: fmt.Sprintf("%s:%d", cfg.Redis.Host, cfg.Redis.Port),
 		Password: cfg.Redis.Password,
 		DB: 0, // use default DB
 	})
 
 	// Test Redis connection
-    _, err = Cache.Ping(ctx).Result()
+    _, err = Redis.Ping(ctx).Result()
     if err != nil {
         log.Printf("Warning: Failed to connect to Redis cache: %v", err)
         log.Println("Continuing without cache functionality...")
+        Redis = nil
         Cache = nil
     } else {
         log.Println("Connected to Redis cache successfully")
+		// Initialize the cache wrapper
+        Cache = NewRedisCache(Redis)
     }
 
 	// Create the enum type if it doesn't exist
@@ -115,11 +119,12 @@ func CloseDB() {
 	}
 
 	// Close the Redis client
-	if Cache != nil {
-		if err := Cache.Close(); err != nil {
+	if Redis != nil {
+		if err := Redis.Close(); err != nil {
 			log.Fatalf("Failed to close Redis connection: %v", err)
 		}
 		log.Println("Redis connection closed")
+		Cache = nil
 	}
 
 }
