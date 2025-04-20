@@ -39,8 +39,8 @@ func init() {
 // Encrypt encrypts plaintext using AES-CTR
 // Returns a struct with hex-encoded iv and content
 func Encrypt(plaintext string) (*struct{
-	IV      string `json:"iv"`
-	Content string `json:"content"`
+	IV      *string `json:"iv"`
+	Content *string `json:"content"`
 }, error) {
 	// Create a new cipher block from the key
 	block, err := aes.NewCipher(SecretKey)
@@ -68,11 +68,11 @@ func Encrypt(plaintext string) (*struct{
 	hexCiphertext := hex.EncodeToString(ciphertext)
 
 	return &struct{
-		IV      string `json:"iv"`
-		Content string `json:"content"`
+		IV      *string `json:"iv"`
+		Content *string `json:"content"`
 	}{
-		IV:      hexIV,
-		Content: hexCiphertext,
+		IV:      &hexIV,
+		Content: &hexCiphertext,
 	}, nil
 }
 
@@ -129,18 +129,19 @@ func GeneratePassword() (string, error) {
 // EncryptSync is a synchronous version of Encrypt
 // This is meant to match the NestJS implementation for use in entities
 func EncryptSync(plaintext string) *struct{
-	IV      string `json:"iv"`
-	Content string `json:"content"`
+	IV     *string `json:"iv"`
+	Content *string `json:"content"`
 } {
 	encrypted, err := Encrypt(plaintext)
 	if err != nil {
 		// In sync version, we return empty result on error
+		empty := ""
 		return &struct{
-			IV      string `json:"iv"`
-			Content string `json:"content"`
+			IV      *string `json:"iv"`
+			Content *string `json:"content"`
 		}{
-			IV:      "",
-			Content: "",
+			IV:      &empty,
+			Content: &empty,
 		}
 	}
 	return encrypted
