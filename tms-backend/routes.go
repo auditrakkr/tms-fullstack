@@ -52,16 +52,16 @@ func SetupTenantRoutes(router *gin.Engine) {
 	regionGroup := router.Group("/regions")
 	{
 		regionGroup.GET("/", regionController.GetAllRegions)
-		regionGroup.GET("/:id", regionController.FindOne)
+		regionGroup.GET("/:regionId", regionController.FindOne)
 		regionGroup.GET("/by-name/:name", regionController.FindByName)
 		regionGroup.GET("/get-tenant-assignable-regions-info", regionController.GetTenantAssignableRegionsInfo)
 
 		regionGroup.POST("/", regionController.CreateRegion)
 		regionGroup.POST("/insert", regionController.InsertRegions)
 
-		regionGroup.PATCH("/:id", regionController.UpdateRegion)
+		regionGroup.PATCH("/:regionId", regionController.UpdateRegion)
 		regionGroup.PUT("/", regionController.SaveRegion)
-		regionGroup.DELETE("/:id", regionController.DeleteRegion)
+		regionGroup.DELETE("/:regionId", regionController.DeleteRegion)
 
 		// Association endpoints
 		regionGroup.PATCH("/:regionId/tenant-config-detail/:tenantConfigDetailId", regionController.AddTenantConfigDetailById)

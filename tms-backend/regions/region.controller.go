@@ -64,7 +64,7 @@ func (rc *RegionController) InsertRegions(c *gin.Context) {
 // UpdateRegion handles PATCH request for updating a region
 func (rc *RegionController) UpdateRegion(c *gin.Context) {
 	// Convert id to uint
-	id, err := strconv.ParseUint(c.Params.ByName("id"), 10, 32)
+	regionId, err := strconv.ParseUint(c.Params.ByName("regionId"), 10, 32)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid region ID"})
 		return
@@ -76,7 +76,7 @@ func (rc *RegionController) UpdateRegion(c *gin.Context) {
 		return
 	}
 
-	region, err := rc.regionService.Update(uint(id), &updateRegionDto)
+	region, err := rc.regionService.Update(uint(regionId), &updateRegionDto)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -144,7 +144,7 @@ func (rc *RegionController) GetAllRegions(c *gin.Context) {
 
 // FindOne handles GET request for fetching a single region by ID
 func (rc *RegionController) FindOne(c *gin.Context) {
-	regionId, err := strconv.ParseUint(c.Params.ByName("id"), 10, 32)
+	regionId, err := strconv.ParseUint(c.Params.ByName("regionId"), 10, 32)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid region ID"})
 		return
@@ -188,13 +188,13 @@ func (rc *RegionController) GetTenantAssignableRegionsInfo(c *gin.Context) {
 // DeleteRegion handles DELETE request for deleting a region
 func (rc *RegionController) DeleteRegion(c *gin.Context) {
 	// Convert id to uint
-	id, err := strconv.ParseUint(c.Params.ByName("id"), 10, 32)
+	regionId, err := strconv.ParseUint(c.Params.ByName("regionId"), 10, 32)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid region ID"})
 		return
 	}
 
-	err = rc.regionService.Delete(uint(id))
+	err = rc.regionService.Delete(uint(regionId))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
