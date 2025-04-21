@@ -1,25 +1,26 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{{ .title }}</title>
 
   <!-- Tailwind CSS -->
-  <link id="theme-stylesheet" href="/assets/light-theme.css" rel="stylesheet">
+  <link id="theme-stylesheet" href="/assets/dist/light-theme.css" rel="stylesheet">
 
   <!-- Custom styles -->
   <style>
     /* Any additional custom styles can go here */
   </style>
 
-  {% block head %}{% endblock %}
+  <!-- Add any head content here -->
 </head>
 
 <body class="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
   <!-- Main content wrapper with flex to push footer to bottom -->
   <div class="flex flex-col min-h-screen">
-    {% block body %}{% endblock %}
+    <!-- Body content goes here -->
+    {{ block "body" . }}{{ end }}
   </div>
 
   <!-- Scripts -->
@@ -31,10 +32,10 @@
 
       if(savedTheme === 'dark' || (!savedTheme && prefersDark)) {
         document.documentElement.classList.add('dark');
-        document.getElementById('theme-stylesheet').href = '/assets/dark-theme.css';
+        document.getElementById('theme-stylesheet').href = '/assets/dist/dark-theme.css';
       }
     });
   </script>
-  {% block scripts %}{% endblock %}
+  <!-- Additional scripts can be included here -->
 </body>
 </html>
