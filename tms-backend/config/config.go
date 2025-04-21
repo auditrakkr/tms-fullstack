@@ -23,7 +23,7 @@ type Config struct {
 	// Redis configuration
 	Redis struct {
 		Host     string
-		Port     string
+		Port     int
 		Password string
 	}
 	Elasticsearch    *struct {
@@ -75,7 +75,7 @@ func LoadConfig() {
 
 	// Redis configuration
 	AppConfig.Redis.Host = viper.GetString("REDIS_HOST")
-	AppConfig.Redis.Port = viper.GetString("REDIS_PORT")
+	AppConfig.Redis.Port = viper.GetInt("REDIS_PORT")
 	AppConfig.Redis.Password = viper.GetString("REDIS_PASSWORD")
 
 	// JWT configuration
