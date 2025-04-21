@@ -53,8 +53,8 @@ yarn-error.log
 
 # env file
 .env
-docker.env
-example.env
+tms-backend/docker.env
+tms-backend/example.env
 
 *.exe
 *.dll
