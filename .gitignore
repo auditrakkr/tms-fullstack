@@ -54,7 +54,6 @@ yarn-error.log
 # env file
 .env
 tms-backend/docker.env
-tms-backend/example.env
 
 *.exe
 *.dll
