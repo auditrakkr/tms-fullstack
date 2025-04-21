@@ -1,6 +1,6 @@
 module.exports = {
   content: [
-    './templates/**/*.html',    // Go template files
+    './views/**/*.html',     // Go template files
     './assets/sass/**/*.scss',  // Custom SCSS paths
     './**/*.go'                 // If you use class names inside Go files
   ],

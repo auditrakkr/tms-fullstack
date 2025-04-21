@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"mime/multipart"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -191,6 +192,157 @@ func (s *UserService) FindOne(userId uint) (*models.User, error) {
 	return user, nil
 }
 
+
+/*Let's work on functions to set/add and unset/remove relations. set/unset applies to x-to-one and add/remove applies to x-to-many */
+//1. Roles
+// CreateAndAddRole creates a new role and assigns it to a user in a transaction
+func (s *UserService) CreateAndAddRole(userId uint, createRoleDto *dto.CreateRoleDto) error {
+	// Start a transaction
+	tx := s.db.Begin()
+	if tx.Error != nil {
+		return fmt.Errorf("failed to start transaction: %v", tx.Error)
+	}
+
+	// Defer either commit or rollback based on success/failure
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+
+	// Create the new role
+	newRole := &models.Role{}
+	if err := copier.Copy(newRole, createRoleDto); err != nil {}
+
+	// Save the new role in the transaction
+    if err := tx.Create(newRole).Error; err != nil {
+        tx.Rollback()
+        // Check for unique constraint violation
+        if strings.Contains(err.Error(), "duplicate key") || strings.Contains(err.Error(), "unique constraint") {
+            return fmt.Errorf("role with this name already exists: %v", err)
+        }
+        return fmt.Errorf("failed to create role: %v", err)
+    }
+
+	return nil
+
+}
+
+func (s *UserService) AddRoleById(userId uint, roleId uint) error {
+	role := &models.Role{}
+	if err := s.db.First(role, roleId).Error; err != nil {
+		return fmt.Errorf("failed to find role: %v", err)
+	}
+
+	err := s.userRepo.CreateQueryBuilder().
+		Where("id = ?", userId).
+		Association("Roles").
+		Append(role)
+
+	if err != nil {
+		// Check for unique constraint violation
+		if strings.Contains(err.Error(), "duplicate key") || strings.Contains(err.Error(), "unique constraint") {
+			return fmt.Errorf("role already assigned to user: %v", err)
+		}
+		return fmt.Errorf("failed to add role to user: %v", err)
+	}
+	return nil
+}
+
+func (s *UserService) AddRolesById(userId uint, roleIds []uint) ([]models.Role, error) {
+	var roles []models.Role
+	err := s.db.Where("id IN ?", roleIds).Find(&roles).Error
+	if err != nil {
+		return nil, fmt.Errorf("failed to find roles: %v", err)
+	}
+
+	if len(roles) == 0 {
+		return nil, fmt.Errorf("no roles found")
+	}
+
+	// Add associations
+	err = s.userRepo.CreateQueryBuilder().
+		Where("id = ?", userId).
+		Association("Roles").
+		Append(roles)
+
+	if err != nil {
+		// Check for unique constraint violation
+		if strings.Contains(err.Error(), "duplicate key") || strings.Contains(err.Error(), "unique constraint") {
+			return nil, fmt.Errorf("one or more roles already assigned to user: %v", err)
+		}
+		return nil, fmt.Errorf("failed to add roles to user: %v", err)
+	}
+
+	// Return the updated roles list
+	user, err := s.userRepo.FindByID(userId)
+	if err != nil {
+		return nil, fmt.Errorf("failed to find user: %v", err)
+	}
+
+	return user.Roles, nil
+}
+
+func (s *UserService) RemoveRoleById(userId uint, roleId uint) ([]models.Role, error) {
+	// Get the role to remove
+	role := &models.Role{}
+	if err := s.db.First(role, roleId).Error; err != nil {
+		return nil, fmt.Errorf("failed to find role: %v", err)
+	}
+
+	// Remove the association
+	err := s.userRepo.CreateQueryBuilder().
+		Where("id = ?", userId).
+		Association("Roles").
+		Delete(role)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to remove role from user: %v", err)
+	}
+
+	// Remove the updated roles list
+	user, err := s.userRepo.FindByID(userId)
+	if err != nil {
+		return nil, fmt.Errorf("failed to find user: %v", err)
+	}
+
+	return user.Roles, nil
+}
+
+func (s *UserService) RemoveRolesById(userId uint, roleIds []uint) ([]models.Role, error) {
+	// Get the roles to remove
+	var roles []models.Role
+	err := s.db.Where("id IN ?", roleIds).Find(&roles).Error
+	if err != nil {
+		return nil, fmt.Errorf("failed to find roles: %v", err)
+	}
+
+	if len(roles) == 0 {
+		return nil, fmt.Errorf("no roles found")
+	}
+
+	// Remove the associations
+	err = s.userRepo.CreateQueryBuilder().
+		Where("id = ?", userId).
+		Association("Roles").
+		Delete(roles)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to remove roles from user: %v", err)
+	}
+
+	// Return the updated roles list
+	user, err := s.userRepo.FindByID(userId)
+	if err != nil {
+		return nil, fmt.Errorf("failed to find user: %v", err)
+	}
+
+	return user.Roles, nil
+
+}
+
+/*Some user perculiarities*/
+
 func (s *UserService) FindByPrimaryEmailAddress(primaryEmailAddress string) (*models.User, error) {
 	var user models.User
 	err := s.userRepo.CreateQueryBuilder().
@@ -203,6 +355,67 @@ func (s *UserService) FindByPrimaryEmailAddress(primaryEmailAddress string) (*mo
 		return nil, fmt.Errorf("user not found")
 	}
 	return &user, nil
+}
+
+func (s *UserService) FindByConfirmedPrimaryEmailAddress(primaryEmailAddress string) (*models.User, error) {
+	var user models.User
+	err := s.userRepo.CreateQueryBuilder().
+		Where("primary_email_address = ? AND is_primary_email_verified = true", primaryEmailAddress).
+		First(&user).Error
+	if err != nil {
+		return nil, fmt.Errorf("failed to find user by confirmed primary email address: %v", err)
+	}
+	if user.PrimaryEmailAddress == "" { // Assuming PrimaryEmailAddress is a required field
+		return nil, fmt.Errorf("user not found")
+	}
+	return &user, nil
+}
+
+func (s *UserService) FindByResetPassToken(resetPasswordToken string) (*models.User, error) {
+	var user models.User
+	err := s.userRepo.CreateQueryBuilder().
+		Where("reset_password_token = ?", resetPasswordToken).
+		First(&user).Error
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, fmt.Errorf("user not found")
+		}
+		return nil, fmt.Errorf("failed to find user by reset password token: %v", err)
+	}
+
+	return &user, nil
+}
+
+func (s *UserService) FindByPrimaryEmailVerificationToken(primaryEmailVerificationToken string) (*models.User, error) {
+    var user models.User
+    err := s.userRepo.CreateQueryBuilder().
+        Where("primary_email_verification_token = ?", primaryEmailVerificationToken).
+        First(&user).Error
+
+    if err != nil {
+        if err == gorm.ErrRecordNotFound {
+            return nil, nil // No user found but not an error
+        }
+        return nil, fmt.Errorf("there was a problem getting user: %v", err)
+    }
+
+    return &user, nil
+}
+
+func (s *UserService) FindByBackupEmailVerificationToken(backupEmailVerificationToken string) (*models.User, error) {
+    var user models.User
+    err := s.userRepo.CreateQueryBuilder().
+        Where("backup_email_verification_token = ?", backupEmailVerificationToken).
+        First(&user).Error
+
+    if err != nil {
+        if err == gorm.ErrRecordNotFound {
+            return nil, nil // No user found but not an error
+        }
+        return nil, fmt.Errorf("there was a problem getting user: %v", err)
+    }
+
+    return &user, nil
 }
 
 func (s *UserService) FindById(id uint) (*models.User, error) {
@@ -513,7 +726,7 @@ func (s *UserService) ResetPasswordRequest(email string, c *gin.Context) (*globa
     }, nil
 }
 
-/* // ResetPassword handles the password reset process
+// ResetPassword handles the password reset process
 func (s *UserService) ResetPassword(token string, newPassword *string,  c *gin.Context)  error {
 	// Find user by reset token
 	var user models.User
@@ -528,30 +741,70 @@ func (s *UserService) ResetPassword(token string, newPassword *string,  c *gin.C
 	}
 
 	// Check token expiration
-	if user.ResetPasswordExpiration.Before(time.Now()) {
-		return fmt.Errorf("token expired")
-	}
+    if user.ResetPasswordExpiration.Before(time.Now()) {
+        // Token expired - render view with error message
+        c.HTML(http.StatusOK, "users/reset-password.html", gin.H{
+            "title":                fmt.Sprintf("%s - Reset Password", global.APP_NAME),
+            "sendForm":             false,
+            "notificationVisibility": "",
+            "notificationClass":    "is-danger",
+            "notificationMessage":  "Invalid token: expired",
+        })
+        return nil
+    }
 
-	if newPassword != nil {
-		// Hash the new password
-		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(*newPassword), bcrypt.DefaultCost)
-		if err != nil {
-			return fmt.Errorf("failed to hash password: %v", err)
-		}
+	// If newPassword is provided, update user's password
+    if newPassword != nil {
+        // Hash the new password
+        hashedPassword, err := bcrypt.GenerateFromPassword([]byte(*newPassword), bcrypt.DefaultCost)
+        if err != nil {
+            return fmt.Errorf("failed to hash password: %v", err)
+        }
 
-		// Update user
-		user.PasswordHash = string(hashedPassword)
-		user.ResetPasswordToken = ""
-		user.ResetPasswordExpiration = time.Time{} // Clear expiration
+        // Update user with new password and clear reset token fields
+        user.PasswordHash = string(hashedPassword)
+        user.ResetPasswordToken = ""
+        user.ResetPasswordExpiration = time.Time{} // Clear expiration
 
-		err = s.userRepo.Update(&user)
-		if err != nil {
-			return fmt.Errorf("failed to update user password: %v", err)
-		}
+        err = s.userRepo.Update(&user)
+        if err != nil {
+            return fmt.Errorf("failed to update user password: %v", err)
+        }
 
-		return nil
-	}
-} */
+        // Password successfully changed - render success view
+        c.HTML(http.StatusOK, "users/reset-password.html", gin.H{
+            "title":                fmt.Sprintf("%s - Reset Password", global.APP_NAME),
+            "sendForm":             false,
+            "notificationVisibility": "",
+            "notificationClass":    "is-success",
+            "notificationMessage":  "New password successfully saved",
+        })
+
+        // Consider sending confirmation email here (optional)
+        // s.sendPasswordChangedConfirmation(user.PrimaryEmailAddress, c)
+
+        return nil
+    }
+
+	// No password provided yet, show the password reset form
+    var globalPrefixUrl string
+    if global.USE_API_VERSION_IN_URL {
+        globalPrefixUrl = fmt.Sprintf("/%s", global.API_VERSION)
+    } else {
+        globalPrefixUrl = ""
+    }
+
+    returnUrl := fmt.Sprintf("%s/users/reset-password/%s", globalPrefixUrl, token)
+
+    c.HTML(http.StatusOK, "users/reset-password.html", gin.H{
+        "title":                fmt.Sprintf("%s - Reset Password", global.APP_NAME),
+        "sendForm":             true,
+        "returnUrl":            returnUrl,
+        "notificationVisibility": "is-hidden",
+    })
+
+    return nil
+}
 
 
 // ConfirmEmailRequest sends an email verification link
@@ -672,4 +925,98 @@ func (s *UserService) ConfirmEmailRequest(email *string, userId uint, isPrimary 
         NotificationMessage: "If valid user, you will receive email shortly for verification",
     }, nil
 
+}
+
+
+// ConfirmEmail confirms an email address with a verification token
+func (s *UserService) ConfirmEmail(token string, isPrimary bool, c *gin.Context) error {
+	// Find user by verification token
+	var user models.User
+	var err error
+
+	if isPrimary {
+		err = s.userRepo.CreateQueryBuilder().
+			Where("primary_email_verification_token = ?", token).
+			First(&user).Error
+	} else {
+		err = s.userRepo.CreateQueryBuilder().
+			Where("backup_email_verification_token = ?", token).
+			First(&user).Error
+	}
+
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return fmt.Errorf("invalid token")
+		}
+		return fmt.Errorf("error finding user: %v", err)
+	}
+
+	// Check token expiration
+	if user.EmailVerificationTokenExpiration.Before(time.Now()) {
+		return fmt.Errorf("token expired")
+	}
+
+	if isPrimary {
+		user.IsPrimaryEmailVerified = true
+		user.PrimaryEmailVerificationToken = ""
+	} else {
+		user.IsBackupEmailVerified = true
+		user.BackupEmailVerificationToken = ""
+	}
+
+	user.EmailVerificationTokenExpiration = time.Time{} // Clear expiration
+
+	// Save user with updated verification status
+	err = s.userRepo.Update(&user)
+	if err != nil {
+		return fmt.Errorf("failed to update user: %v", err)
+	}
+
+	return nil
+}
+
+
+// SearchForUsers searches for users based on a query
+func (s *UserService) SearchForUsers(text string, returnElasticSearchHitsDirectly bool) (interface{}, error) {
+	ctx := context.Background()
+
+	// Search for users matching the text
+    results, err := s.usersSearchService.Search(ctx, text)
+    if err != nil {
+        return nil, fmt.Errorf("failed to search users: %v", err)
+    }
+
+	if returnElasticSearchHitsDirectly {
+		return results, nil
+	} else {
+		// Extract IDs from search results
+        var ids []uint
+        for _, result := range results {
+            // UserSearchBody has an ID field of type int, convert to uint
+            ids = append(ids, uint(result.ID))
+        }
+
+		// If no results found, return empty array
+        if len(ids) == 0 {
+            return []models.User{}, nil
+        }
+
+		// Fetch actual users from the database using the IDs
+        var users []models.User
+        err = s.userRepo.CreateQueryBuilder().
+            Where("id IN ?", ids).
+            Find(&users).Error
+
+        if err != nil {
+            return nil, fmt.Errorf("failed to fetch users by IDs: %v", err)
+        }
+		return users, nil
+	}
+
+}
+
+// SuggestUsers provides autocomplete suggestions
+func (s *UserService) SuggestUsers(text string) (interface{}, error) {
+	ctx := context.Background()
+	return s.usersSearchService.Suggest(ctx, text)
 }

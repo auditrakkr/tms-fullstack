@@ -3,7 +3,7 @@ package main
 import (
 	"github.com/auditrakkr/tms-fullstack/tms-backend/regions"
 	"github.com/auditrakkr/tms-fullstack/tms-backend/roles"
-	tenantconfigdetails "github.com/auditrakkr/tms-fullstack/tms-backend/tenant-config-details"
+	"github.com/auditrakkr/tms-fullstack/tms-backend/tenant-config-details"
 	"github.com/auditrakkr/tms-fullstack/tms-backend/tenants"
 	"github.com/auditrakkr/tms-fullstack/tms-backend/tenants/billings"
 	"github.com/auditrakkr/tms-fullstack/tms-backend/tenants/themes"
@@ -21,13 +21,16 @@ func SetupTenantRoutes(router *gin.Engine) {
 		tenantGroup.GET("/", tenantController.GetAllTenants)
 		tenantGroup.GET("/:id", tenantController.FindOne)
 		tenantGroup.GET("/get-active-tenants-in-region/:regionName", tenantController.FindActiveTenantsByRegionName)
-		tenantGroup.POST("/", tenantController.CreateTenant)
-		tenantGroup.DELETE("/:id", tenantController.DeleteTenant)
-		tenantGroup.PATCH("/:id", tenantController.UpdateTenant)
-		tenantGroup.POST("/themes", themeController.CreateTheme)
 		tenantGroup.GET("/themes", themeController.FindAll)
-		tenantGroup.POST("/billings", billingController.CreateBilling)
 		tenantGroup.GET("/billings", billingController.FindAll)
+
+		tenantGroup.POST("/", tenantController.CreateTenant)
+		tenantGroup.POST("/themes", themeController.CreateTheme)
+		tenantGroup.POST("/billings", billingController.CreateBilling)
+
+
+		tenantGroup.PATCH("/:id", tenantController.UpdateTenant)
+		tenantGroup.DELETE("/:id", tenantController.DeleteTenant)
 	}
 
 
@@ -38,28 +41,45 @@ func SetupTenantRoutes(router *gin.Engine) {
 	{
 		userGroup.GET("/", userController.GetAllUsers)
 		userGroup.GET("/:id", userController.FindOne)
+
 		userGroup.POST("/", userController.CreateUser)
-		userGroup.DELETE("/:id", userController.DeleteUser)
+
 		userGroup.PATCH("/:id", userController.UpdateUser)
+		userGroup.DELETE("/:id", userController.DeleteUser)
 	}
 
 	regionController := regions.NewRegionController(regions.NewRegionService())
 	regionGroup := router.Group("/regions")
 	{
 		regionGroup.GET("/", regionController.GetAllRegions)
+		regionGroup.GET("/:regionId", regionController.FindOne)
+		regionGroup.GET("/by-name/:name", regionController.FindByName)
+		regionGroup.GET("/get-tenant-assignable-regions-info", regionController.GetTenantAssignableRegionsInfo)
+
 		regionGroup.POST("/", regionController.CreateRegion)
-		regionGroup.PATCH("/:id", regionController.UpdateRegion)
-		regionGroup.DELETE("/:id", regionController.DeleteRegion)
+		regionGroup.POST("/insert", regionController.InsertRegions)
+
+		regionGroup.PATCH("/:regionId", regionController.UpdateRegion)
+		regionGroup.PUT("/", regionController.SaveRegion)
+		regionGroup.DELETE("/:regionId", regionController.DeleteRegion)
+
+		// Association endpoints
+		regionGroup.PATCH("/:regionId/tenant-config-detail/:tenantConfigDetailId", regionController.AddTenantConfigDetailById)
+		regionGroup.PATCH("/:regionId/tenant-config-details", regionController.AddTenantConfigDetailsById)
+		regionGroup.DELETE("/:regionId/tenant-config-detail/:tenantConfigDetailId", regionController.RemoveTenantConfigDetailById)
+		regionGroup.DELETE("/:regionId/tenant-config-details", regionController.RemoveTenantConfigDetailsById)
 	}
 
-	tenantenantConfigDetailsController := tenantconfigdetails.NewTenantConfigDetailsController(tenantconfigdetails.NewTenantConfigDetailsService())
+	tenantConfigDetailsController := tenantconfigdetails.NewTenantConfigDetailsController(tenantconfigdetails.NewTenantConfigDetailsService())
 	tenantConfigDetailsGroup := router.Group("/tenant-config-details")
 	{
-		tenantConfigDetailsGroup.GET("/", tenantenantConfigDetailsController.GetAllTenantConfigDetails)
-		tenantConfigDetailsGroup.GET("/:id", tenantenantConfigDetailsController.FindOne)
-		tenantConfigDetailsGroup.POST("/", tenantenantConfigDetailsController.CreateTenantConfigDetail)
-		tenantConfigDetailsGroup.PATCH("/:id", tenantenantConfigDetailsController.Update)
-		tenantConfigDetailsGroup.DELETE("/:id", tenantenantConfigDetailsController.Delete)
+		tenantConfigDetailsGroup.GET("/", tenantConfigDetailsController.GetAllTenantConfigDetails)
+		tenantConfigDetailsGroup.GET("/:id", tenantConfigDetailsController.FindOne)
+
+		tenantConfigDetailsGroup.POST("/", tenantConfigDetailsController.CreateTenantConfigDetail)
+
+		tenantConfigDetailsGroup.PATCH("/:id", tenantConfigDetailsController.Update)
+		tenantConfigDetailsGroup.DELETE("/:id", tenantConfigDetailsController.Delete)
 	}
 
 	roleController := roles.NewRoleController(roles.NewRoleService())
@@ -67,7 +87,9 @@ func SetupTenantRoutes(router *gin.Engine) {
 	{
 		roleGroup.GET("/", roleController.GetAllRoles)
 		roleGroup.GET("/:id", roleController.FindOne)
+
 		roleGroup.POST("/", roleController.CreateRole)
+
 		roleGroup.PATCH("/:id", roleController.UpdateRole)
 		roleGroup.PUT("/", roleController.SaveRole)
 		roleGroup.DELETE("/:id", roleController.DeleteRole)

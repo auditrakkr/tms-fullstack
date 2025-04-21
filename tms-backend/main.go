@@ -27,6 +27,7 @@ func main() {
 
 	r := gin.Default()
 	r.Static("/assets", "./assets/dist")
+	r.Static("/js", "./assets/js") // Add this for the themeToggle.js
 	r.LoadHTMLGlob("./views/*.html")
 	port :="8080"
 
