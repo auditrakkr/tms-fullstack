@@ -1,60 +1,48 @@
-{% extends "base.html" %}
-{% block body %}
-{% include "navigation.html" %}
+{{template "base.html" .}}
 
-<section class="py-6 flex-grow">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+{{define "body"}}
+{{template "navigation.html" .}}
+
+<main class="flex-grow">
+  <div class="max-w-md mx-auto mt-10 px-4 sm:px-6 lg:px-8">
     <div class="mb-8">
-      <h3 class="text-2xl font-bold text-gray-900 dark:text-white">{{title}}</h3>
+      <h2 class="text-2xl font-bold text-gray-900 dark:text-white">{{.title}}</h2>
     </div>
-    
+
     <!-- Notification component -->
-    <div id="notification" class="relative px-4 py-3 mb-4 border rounded-md shadow-sm animate-slideInUp
-      {{ notificationClass|default('bg-blue-100 border-blue-500 text-blue-800 dark:bg-blue-900 dark:border-blue-700 dark:text-blue-200') }}">
-      <button class="absolute top-2 right-2 p-1 rounded-full text-gray-500 hover:text-gray-700 hover:bg-gray-100 
-                    dark:text-gray-300 dark:hover:text-gray-100 dark:hover:bg-gray-800 focus:outline-none">
+    <!-- trunk-ignore(prettier/SyntaxError) -->
+    {{$defaultClass := "bg-blue-100 border-blue-500 text-blue-800 dark:bg-blue-900 dark:border-blue-700 dark:text-blue-200"}}
+    <div id="notification" class="mt-6 relative px-4 py-3 border rounded-md shadow-sm animate-slide-in-up {{if .notificationShow}}{{else}}hidden{{end}}
+                 {{.notificationColorClass | .default $defaultClass}}">
+      <button class="absolute top-2 right-2 p-1 rounded-full text-gray-500 hover:text-gray-700 hover:bg-gray-100
+                     dark:text-gray-300 dark:hover:text-gray-100 dark:hover:bg-gray-800 focus:outline-none">
         <span class="sr-only">Dismiss</span>
         <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-          <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+          <path fill-rule="evenodd"
+            d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+            clip-rule="evenodd" />
         </svg>
       </button>
       <div id="notificationMessage" class="pr-8">
-        {{notificationMessage}}
+        {{.notificationMessage}}
       </div>
     </div>
   </div>
-</section>
+</main>
 
-{% include "footer.html" %}
+{{template "footer.html" .}}
 
 <script>
-  // Notification dismiss functionality
+  // Dismiss notification functionality
   document.addEventListener('DOMContentLoaded', () => {
     const deleteButton = document.querySelector('#notification button');
     const notification = document.getElementById('notification');
-    
+
     if (deleteButton && notification) {
       deleteButton.addEventListener('click', () => {
-        notification.remove();
+        notification.classList.add('hidden');
       });
     }
   });
 </script>
-
-<style>
-  /* Animation styles */
-  @keyframes slideInUp {
-    from {
-      transform: translateY(1rem);
-      opacity: 0;
-    }
-    to {
-      transform: translateY(0);
-      opacity: 1;
-    }
-  }
-  .animate-slideInUp {
-    animation: slideInUp 0.3s ease-out forwards;
-  }
-</style>
-{% endblock %}
+{{end}}

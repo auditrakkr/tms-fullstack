@@ -1,3 +1,61 @@
-@charset "utf-8";
-@use "light-theme";
-@use "dark-theme";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Import light theme styles by default */
+@import "light-theme";
+
+/* Import dark theme styles for dark class */
+.dark {
+  /* Import dark theme styles */
+  @import "dark-theme";
+}
+
+/* Common styles across themes */
+@layer components {
+  /* Animation utilities */
+  .animated {
+    animation-duration: 0.3s;
+    animation-fill-mode: both;
+  }
+
+  .fadeIn {
+    animation-name: fadeIn;
+  }
+
+  .slideInUp {
+    animation-name: slideInUp;
+  }
+
+  /* Layout utilities */
+  .layout-documentation {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .page-layout {
+    @apply bg-white dark:bg-gray-900 text-gray-900 dark:text-white;
+  }
+}
+
+/* Keyframe animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideInUp {
+  from {
+    transform: translateY(1rem);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}

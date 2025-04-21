@@ -7,6 +7,11 @@
 
   <!-- Tailwind CSS -->
   <link id="theme-stylesheet" href="/assets/dist/light-theme.css" rel="stylesheet">
+
+  <!-- Additional styles -->
+  <style>
+    /* Any component-specific styles go here */
+  </style>
 </head>
 
 <body class="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
@@ -31,7 +36,7 @@
                 <svg class="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
                   <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
                 </svg>
-                <a href="/{{.apiVersion}}/users" class="ml-1 text-sm font-medium text-gray-700 hover:text-indigo-600 md:ml-2 dark:text-gray-300 dark:hover:text-indigo-400">User Management</a>
+                <a href="#" class="ml-1 text-sm font-medium text-gray-700 hover:text-indigo-600 md:ml-2 dark:text-gray-300 dark:hover:text-indigo-400">{{ .sectionTitle }}</a>
               </div>
             </li>
           </ol>
@@ -45,3 +50,22 @@
         <!-- React root container -->
         <div id="root">
           <!-- React component will render here -->
+        </div>
+
+        <!-- Initial props for React hydration -->
+        <script id="initial-props" type="text/plain" data-json="{{.initialProps}}"></script>
+      </div>
+    </section>
+
+    {{template "footer.html" .}}
+  </div>
+
+  <!-- Theme toggle script -->
+  <script src="/assets/js/themeToggle.js"></script>
+
+  <!-- React scripts - these would be generated from your build process -->
+  <script src="/assets/js/{{ .componentLocation }}/runtime.js" defer></script>
+  <script src="/assets/js/{{ .componentLocation }}/vendors.js" defer></script>
+  <script src="/assets/js/{{ .componentLocation }}/main.js" defer></script>
+</body>
+</html>
