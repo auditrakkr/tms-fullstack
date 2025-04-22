@@ -59,3 +59,5 @@ tms-backend/docker.env
 *.dll
 *.so
 tms-backend/tms-backend
+
+tms-backend/package-lock.json
