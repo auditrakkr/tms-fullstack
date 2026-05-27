@@ -1,28 +1,36 @@
 package auth
 
+import "github.com/auditrakkr/tms-fullstack/tms-backend/models"
 
 // AuthTokenPayload represents the JWT payload
 type AuthTokenPayload struct {
 	Username string `json:"username"`
-	Sub struct {
-		ID uint `json:"id"`
-		FirstName string `json:"first_name"`
-		LastName string `json:"last_name"`
-		Landlord bool `json:"landlord"`
-		Roles []string `json:"roles"`
+	Sub      struct {
+		ID        uint     `json:"id"`
+		FirstName string   `json:"first_name"`
+		LastName  string   `json:"last_name"`
+		Landlord  bool     `json:"landlord"`
+		Roles     []string `json:"roles"`
 	} `json:"sub"`
+}
+
+// LoginResponse is returned after a successful login.
+type LoginResponse struct {
+	AccessToken  string       `json:"accessToken"`
+	RefreshToken string       `json:"refreshToken"`
+	User         *models.User `json:"user,omitempty"`
 }
 
 // JwtConstants holds configuration for JWT
 type JwtConstants struct {
-	Secret                   string
-	SecretKeyExpiration      int
-	RefreshSecret            string
+	Secret                     string
+	SecretKeyExpiration        int
+	RefreshSecret              string
 	RefreshSecretKeyExpiration string
-	SecretPrivateKey         string
+	SecretPrivateKey           string
 	SecretPrivateKeyPassphrase string
-	SecretPublicKey          string
-	SignAlgorithm            string
+	SecretPublicKey            string
+	SignAlgorithm              string
 }
 
 // GoogleOidcConstants holds configuration for Google OIDC
@@ -38,10 +46,10 @@ type GoogleOidcConstants struct {
 
 // FacebookConstants holds configuration for Facebook OAuth
 type FacebookConstants struct {
-	AppID                  string
-	AppSecret              string
-	CallbackURL            string
-	Scope                  string
-	ProfileFields          []string
-	CreateUserIfNotExists  bool
+	AppID                 string
+	AppSecret             string
+	CallbackURL           string
+	Scope                 string
+	ProfileFields         []string
+	CreateUserIfNotExists bool
 }

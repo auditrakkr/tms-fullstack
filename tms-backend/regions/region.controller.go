@@ -7,339 +7,242 @@ import (
 	"strings"
 
 	dto "github.com/auditrakkr/tms-fullstack/tms-backend/dtos"
+	"github.com/auditrakkr/tms-fullstack/tms-backend/global"
+	"github.com/auditrakkr/tms-fullstack/tms-backend/middleware"
 	"github.com/auditrakkr/tms-fullstack/tms-backend/models"
 	"github.com/gin-gonic/gin"
 )
-
 
 type RegionController struct {
 	regionService *RegionService
 }
 
 func NewRegionController(regionService *RegionService) *RegionController {
-	return &RegionController{
-		regionService: regionService,
-	}
+	return &RegionController{regionService: regionService}
 }
 
+/* CREATE */
 
-/* Create */
-
-// CreateRegion handles POST request for creating a new region
 func (rc *RegionController) CreateRegion(c *gin.Context) {
 	var createRegionDto dto.CreateRegionDto
-	if err := c.ShouldBindJSON(&createRegionDto); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request payload"})
+	if !middleware.BindAndValidate(c, &createRegionDto) {
 		return
 	}
-
-	region, err := rc.regionService.Create(&createRegionDto)
+	region, err := rc.regionService.Create(c.Request.Context(), &createRegionDto)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		global.RespondWithError(c, err)
 		return
 	}
-
 	c.JSON(http.StatusCreated, gin.H{"region": region})
 }
 
-// InsertRegions handles POST request for bulk inserting regions
 func (rc *RegionController) InsertRegions(c *gin.Context) {
 	var createRegionDtos []dto.CreateRegionDto
 	if err := c.ShouldBindJSON(&createRegionDtos); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request payload"})
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid request payload"})
 		return
 	}
-
-	regions, err := rc.regionService.InsertRegions(&createRegionDtos)
+	regions, err := rc.regionService.InsertRegions(c.Request.Context(), &createRegionDtos)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		global.RespondWithError(c, err)
 		return
 	}
-
 	c.JSON(http.StatusCreated, gin.H{"regions": regions})
 }
 
-/* Update */
+/* UPDATE */
 
-// UpdateRegion handles PATCH request for updating a region
 func (rc *RegionController) UpdateRegion(c *gin.Context) {
-	// Convert id to uint
-	regionId, err := strconv.ParseUint(c.Params.ByName("regionId"), 10, 32)
+	regionId, err := strconv.ParseUint(c.Param("regionId"), 10, 32)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid region ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid region ID"})
 		return
 	}
-
 	var updateRegionDto dto.UpdateRegionDto
-	if err := c.ShouldBindJSON(&updateRegionDto); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request payload"})
+	if !middleware.BindAndValidate(c, &updateRegionDto) {
 		return
 	}
-
-	region, err := rc.regionService.Update(uint(regionId), &updateRegionDto)
+	region, err := rc.regionService.Update(c.Request.Context(), uint(regionId), &updateRegionDto)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		global.RespondWithError(c, err)
 		return
 	}
-
 	c.JSON(http.StatusOK, gin.H{"region": region})
 }
 
-// SaveRegion handles PUT request for full region update
 func (rc *RegionController) SaveRegion(c *gin.Context) {
 	var region models.Region
 	if err := c.ShouldBindJSON(&region); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request payload"})
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid request payload"})
 		return
 	}
-
-	savedRegion, err := rc.regionService.Save(&region)
+	saved, err := rc.regionService.Save(c.Request.Context(), &region)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		global.RespondWithError(c, err)
 		return
 	}
-
-	c.JSON(http.StatusOK, gin.H{"region": savedRegion})
+	c.JSON(http.StatusOK, gin.H{"region": saved})
 }
-
 
 /* GET */
 
-// GetAllRegions handles GET request for fetching all regions
 func (rc *RegionController) GetAllRegions(c *gin.Context) {
-
-	// Check if query parameters exist
-	findOptionsParam := c.Query("findOptions")
-	if findOptionsParam != "" {
-		// Parse the find options
+	if c.Query("findOptions") != "" {
 		findOptions := make(map[string]any)
-		err := c.ShouldBindQuery(&findOptions)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid find options"})
+		if err := c.ShouldBindQuery(&findOptions); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid find options"})
 			return
 		}
-
-		regions, totalCount, err := rc.regionService.FindAllWithOptions(findOptions)
+		regions, total, err := rc.regionService.FindAllWithOptions(c.Request.Context(), findOptions)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			global.RespondWithError(c, err)
 			return
 		}
-
-		c.JSON(http.StatusOK, gin.H{
-			"regions": regions,
-			"total": totalCount,
-		})
+		c.JSON(http.StatusOK, gin.H{"regions": regions, "total": total})
 		return
 	}
-
-	// No query parameters, get all regions
-	regions, err := rc.regionService.GetAllRegions()
+	regions, err := rc.regionService.GetAllRegions(c.Request.Context())
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		global.RespondWithError(c, err)
 		return
 	}
-
 	c.JSON(http.StatusOK, gin.H{"regions": regions})
 }
 
-// FindOne handles GET request for fetching a single region by ID
 func (rc *RegionController) FindOne(c *gin.Context) {
-	regionId, err := strconv.ParseUint(c.Params.ByName("regionId"), 10, 32)
+	regionId, err := strconv.ParseUint(c.Param("regionId"), 10, 32)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid region ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid region ID"})
 		return
 	}
-
-	region, err := rc.regionService.FindOne(uint(regionId))
+	region, err := rc.regionService.FindOne(c.Request.Context(), uint(regionId))
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		global.RespondWithError(c, err)
 		return
 	}
-
 	c.JSON(http.StatusOK, gin.H{"region": region})
 }
 
-// FindByName handles GET request for fetching a single region by name
 func (rc *RegionController) FindByName(c *gin.Context) {
-	name := c.Param("name")
-	region, err := rc.regionService.FindByRegionName(name)
+	region, err := rc.regionService.FindByRegionName(c.Request.Context(), c.Param("name"))
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		global.RespondWithError(c, err)
 		return
 	}
-
 	c.JSON(http.StatusOK, gin.H{"region": region})
 }
 
-// GetTenantAssignableRegionsInfo handles GET request for fetching regions info for tenant assignment
 func (rc *RegionController) GetTenantAssignableRegionsInfo(c *gin.Context) {
-	regions, err := rc.regionService.GetTenantAssignableRegionsInfo()
+	regions, err := rc.regionService.GetTenantAssignableRegionsInfo(c.Request.Context())
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		global.RespondWithError(c, err)
 		return
 	}
-
 	c.JSON(http.StatusOK, gin.H{"regions": regions})
 }
-
 
 /* DELETE */
 
-// DeleteRegion handles DELETE request for deleting a region
 func (rc *RegionController) DeleteRegion(c *gin.Context) {
-	// Convert id to uint
-	regionId, err := strconv.ParseUint(c.Params.ByName("regionId"), 10, 32)
+	regionId, err := strconv.ParseUint(c.Param("regionId"), 10, 32)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid region ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid region ID"})
 		return
 	}
-
-	err = rc.regionService.Delete(uint(regionId))
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	if err := rc.regionService.Delete(c.Request.Context(), uint(regionId)); err != nil {
+		global.RespondWithError(c, err)
 		return
 	}
-
 	c.JSON(http.StatusOK, gin.H{"message": "Region deleted successfully"})
 }
 
-
-/* ASSOCIATION section */
-// AddTenantConfigDetailById handles PATCH request for adding a tenant config detail to a region
+/* ASSOCIATIONS */
 
 func (rc *RegionController) AddTenantConfigDetailById(c *gin.Context) {
-	// Parse regionId from URL parameter
-	regionId, err := strconv.ParseUint(c.Params.ByName("regionId"), 10, 32)
-    if err != nil {
-        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid region ID"})
-        return
-    }
-
-    // Parse tenantConfigDetailId from URL parameter
-    tenantConfigDetailId, err := strconv.ParseUint(c.Params.ByName("tenantConfigDetailId"), 10, 32)
-    if err != nil {
-        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid tenant config detail ID"})
-        return
-    }
-
-	// Call the service method to add the tenant config detail to the region
-    err = rc.regionService.AddTenantConfigDetailById(uint(regionId), uint(tenantConfigDetailId))
-    if err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-        return
-    }
-
-    c.JSON(http.StatusOK, gin.H{
-        "message": "Tenant config detail added to region successfully",
-    })
+	regionId, err := strconv.ParseUint(c.Param("regionId"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid region ID"})
+		return
+	}
+	tcdId, err := strconv.ParseUint(c.Param("tenantConfigDetailId"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid tenant config detail ID"})
+		return
+	}
+	if err := rc.regionService.AddTenantConfigDetailById(c.Request.Context(), uint(regionId), uint(tcdId)); err != nil {
+		global.RespondWithError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "Tenant config detail added to region successfully"})
 }
 
-// AddTenantConfigDetailsById handles PATCH request for adding multiple tenant config details to a region
 func (rc *RegionController) AddTenantConfigDetailsById(c *gin.Context) {
-	// Parse regionId from URL parameter
-    regionId, err := strconv.ParseUint(c.Params.ByName("regionId"), 10, 32)
-    if err != nil {
-        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid region ID"})
-        return
-    }
-
-	// Get tenant config detail IDs from query string
-    tenantConfigDetailIdsStr := c.Query("tenantConfigDetailIds")
-    if tenantConfigDetailIdsStr == "" {
-        c.JSON(http.StatusBadRequest, gin.H{"error": "Missing tenant config detail IDs"})
-        return
-    }
-
-	// Parse tenant config detail IDs from comma-separated string
-    tenantConfigDetailIds := []uint{}
-    idStrs := strings.Split(tenantConfigDetailIdsStr, ",")
-    for _, idStr := range idStrs {
-        id, err := strconv.ParseUint(idStr, 10, 32)
-        if err != nil {
-            c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Invalid tenant config detail ID: %s", idStr)})
-            return
-        }
-        tenantConfigDetailIds = append(tenantConfigDetailIds, uint(id))
-    }
-
-	// Call the service method to add the tenant config details to the region
-    tenantConfigDetails, err := rc.regionService.AddTenantConfigDetailsById(uint(regionId), tenantConfigDetailIds)
-    if err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-        return
-    }
-
-    // Return the updated tenant config details
-    c.JSON(http.StatusOK, gin.H{
-		"message": "Tenant config details added to region successfully",
-		"tenantConfigDetails": tenantConfigDetails,
-	})
-
-
+	regionId, err := strconv.ParseUint(c.Param("regionId"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid region ID"})
+		return
+	}
+	ids, err := parseUintList(c.Query("tenantConfigDetailIds"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
+		return
+	}
+	tcds, err := rc.regionService.AddTenantConfigDetailsById(c.Request.Context(), uint(regionId), ids)
+	if err != nil {
+		global.RespondWithError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "Tenant config details added", "tenantConfigDetails": tcds})
 }
 
-
-
-// RemoveTenantConfigDetailById handles DELETE request for removing a tenant config detail from a region
 func (rc *RegionController) RemoveTenantConfigDetailById(c *gin.Context) {
-	// Get region ID
-	regionId, err := strconv.ParseUint(c.Params.ByName("regionId"), 10, 32)
+	regionId, err := strconv.ParseUint(c.Param("regionId"), 10, 32)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid region ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid region ID"})
 		return
 	}
-
-	// Get tenant config detail ID
-	tenantConfigDetailId, err := strconv.ParseUint(c.Params.ByName("tenantConfigDetailId"), 10, 32)
+	tcdId, err := strconv.ParseUint(c.Param("tenantConfigDetailId"), 10, 32)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid tenant config detail ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid tenant config detail ID"})
 		return
 	}
-
-	// Remove the tenant config detail from the region
-	err = rc.regionService.RemoveTenantConfigDetailById(uint(regionId), uint(tenantConfigDetailId))
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	if err := rc.regionService.RemoveTenantConfigDetailById(c.Request.Context(), uint(regionId), uint(tcdId)); err != nil {
+		global.RespondWithError(c, err)
 		return
 	}
-
 	c.JSON(http.StatusOK, gin.H{"message": "Tenant config detail removed from region successfully"})
 }
 
-// RemoveTenantConfigDetailsById handles DELETE request for removing multiple tenant config details from a region
 func (rc *RegionController) RemoveTenantConfigDetailsById(c *gin.Context) {
-	// Get region ID
-	regionId, err := strconv.ParseUint(c.Params.ByName("regionId"), 10, 32)
+	regionId, err := strconv.ParseUint(c.Param("regionId"), 10, 32)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid region ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid region ID"})
 		return
 	}
-
-	// Get tenant config detail IDs from query string
-	tenantConfigDetailIdsStr := c.Query("tenantConfigDetailIds")
-	if tenantConfigDetailIdsStr == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Missing tenant config detail IDs"})
-		return
-	}
-
-	// Parse tenant config detail IDs
-	tenantConfigDetailIds := []uint{}
-	idStrs := strings.Split(tenantConfigDetailIdsStr, ",")
-	for _, idStr := range idStrs {
-		id, err := strconv.ParseUint(idStr, 10, 32)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Invalid tenant config detail ID: %s", idStr)})
-			return
-		}
-		tenantConfigDetailIds = append(tenantConfigDetailIds, uint(id))
-	}
-
-	// Remove the tenant config details from the region
-	err = rc.regionService.RemoveTenantConfigDetailsById(uint(regionId), tenantConfigDetailIds)
+	ids, err := parseUintList(c.Query("tenantConfigDetailIds"))
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
 		return
 	}
-
+	if err := rc.regionService.RemoveTenantConfigDetailsById(c.Request.Context(), uint(regionId), ids); err != nil {
+		global.RespondWithError(c, err)
+		return
+	}
 	c.JSON(http.StatusOK, gin.H{"message": "Tenant config details removed from region successfully"})
+}
+
+func parseUintList(raw string) ([]uint, error) {
+	if raw == "" {
+		return nil, fmt.Errorf("missing tenant config detail IDs")
+	}
+	parts := strings.Split(raw, ",")
+	ids := make([]uint, 0, len(parts))
+	for _, p := range parts {
+		v, err := strconv.ParseUint(strings.TrimSpace(p), 10, 32)
+		if err != nil {
+			return nil, fmt.Errorf("invalid ID: %s", p)
+		}
+		ids = append(ids, uint(v))
+	}
+	return ids, nil
 }

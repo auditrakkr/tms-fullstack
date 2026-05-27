@@ -7,142 +7,119 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"os"
 )
 
-var (
-	// Algorithm is aes256-ctr
-	Algorithm = "AES-CTR"
+// Algorithm documents the symmetric cipher in use.
+const Algorithm = "AES-CTR"
 
-	//SecretKey from environment variable
-	SecretKey []byte
-)
+// secretKey holds the AES-256 key after InitCrypto is called.
+var secretKey []byte
 
-func init() {
-	// Get the secret key from the environment variable
-	key := os.Getenv("SECRET_KEY_FOR_CRYPTO_ENCRYPTION")
+// InitCrypto must be called once at startup (from main) before any
+// Encrypt/Decrypt calls.  key must be between 1 and 32 characters; shorter
+// keys are zero-padded, longer keys are truncated to 32 bytes.
+// Returns an error if the key is empty.
+func InitCrypto(key string) error {
 	if key == "" {
-		// Use a default key for development (not recommended for production)
-		key = "default_encryption_key_32_bytes_123"
+		return errors.New("crypto key must not be empty")
 	}
-
-	// Ensure key is exactly 32 bytes (for AES-256)
-	if len(key) < 32 {
-		key = key + string(make([]byte, 32-len(key)))
-	} else if len(key) > 32 {
-		key = key[:32]
+	b := []byte(key)
+	if len(b) < 32 {
+		padded := make([]byte, 32)
+		copy(padded, b)
+		b = padded
+	} else if len(b) > 32 {
+		b = b[:32]
 	}
-
-	SecretKey = []byte(key)
+	secretKey = b
+	return nil
 }
 
-// Encrypt encrypts plaintext using AES-CTR
-// Returns a struct with hex-encoded iv and content
-func Encrypt(plaintext string) (*struct{
+// Encrypt encrypts plaintext using AES-256-CTR.
+// Returns a struct with hex-encoded IV and ciphertext.
+func Encrypt(plaintext string) (*struct {
 	IV      *string `json:"iv"`
 	Content *string `json:"content"`
 }, error) {
-	// Create a new cipher block from the key
-	block, err := aes.NewCipher(SecretKey)
+	if secretKey == nil {
+		return nil, errors.New("crypto not initialised: call utils.InitCrypto first")
+	}
+	block, err := aes.NewCipher(secretKey)
 	if err != nil {
 		return nil, err
 	}
-
-	// Create a 16-byte initialization vector
 	iv := make([]byte, 16)
 	if _, err = rand.Read(iv); err != nil {
 		return nil, err
 	}
-
-	// Create a stream cipher using CTR mode
 	stream := cipher.NewCTR(block, iv)
-
-	// Create buffer for ciphertext
 	ciphertext := make([]byte, len(plaintext))
-
-	// Encrypt the data
 	stream.XORKeyStream(ciphertext, []byte(plaintext))
 
-	// Convert to hex encoding (matching Node.js implementation)
 	hexIV := hex.EncodeToString(iv)
-	hexCiphertext := hex.EncodeToString(ciphertext)
-
-	return &struct{
+	hexContent := hex.EncodeToString(ciphertext)
+	return &struct {
 		IV      *string `json:"iv"`
 		Content *string `json:"content"`
-	}{
-		IV:      &hexIV,
-		Content: &hexCiphertext,
-	}, nil
+	}{IV: &hexIV, Content: &hexContent}, nil
 }
 
-// Decrypt decrypts ciphertext using AES-CTR
-func Decrypt(encryptedData *struct{
+// Decrypt reverses Encrypt.
+func Decrypt(encryptedData *struct {
 	IV      string `json:"iv"`
 	Content string `json:"content"`
 }) (string, error) {
+	if secretKey == nil {
+		return "", errors.New("crypto not initialised: call utils.InitCrypto first")
+	}
 	if encryptedData == nil {
 		return "", errors.New("invalid encrypted data")
 	}
-
-	// Decode from hex
 	iv, err := hex.DecodeString(encryptedData.IV)
 	if err != nil {
 		return "", fmt.Errorf("failed to decode IV: %w", err)
 	}
-
 	ciphertext, err := hex.DecodeString(encryptedData.Content)
 	if err != nil {
 		return "", fmt.Errorf("failed to decode ciphertext: %w", err)
 	}
-
-	// Create a new cipher block from the key
-	block, err := aes.NewCipher(SecretKey)
+	block, err := aes.NewCipher(secretKey)
 	if err != nil {
 		return "", err
 	}
-
-	// Create a stream cipher using CTR mode
 	stream := cipher.NewCTR(block, iv)
-
-	// Create buffer for plaintext
 	plaintext := make([]byte, len(ciphertext))
-
-	// Decrypt the data
 	stream.XORKeyStream(plaintext, ciphertext)
-
 	return string(plaintext), nil
 }
 
-// GeneratePassword generates a random password
-func GeneratePassword() (string, error) {
-	// Generate 12 random bytes (24 hex chars)
-	randomBytes := make([]byte, 12)
-	if _, err := rand.Read(randomBytes); err != nil {
+// GenerateRandomToken returns a hex-encoded random token of the given byte length.
+func GenerateRandomToken(length int) (string, error) {
+	b := make([]byte, length)
+	if _, err := rand.Read(b); err != nil {
 		return "", err
 	}
-
-	// Convert to hex
-	return hex.EncodeToString(randomBytes), nil
+	return hex.EncodeToString(b), nil
 }
 
-// EncryptSync is a synchronous version of Encrypt
-// This is meant to match the NestJS implementation for use in entities
-func EncryptSync(plaintext string) *struct{
-	IV     *string `json:"iv"`
+// GeneratePassword returns a random 24-character hex password (12 random bytes).
+func GeneratePassword() (string, error) {
+	return GenerateRandomToken(12)
+}
+
+// EncryptSync is a synchronous wrapper around Encrypt for use in entity hooks
+// where an error return is inconvenient. Returns empty strings on failure.
+func EncryptSync(plaintext string) *struct {
+	IV      *string `json:"iv"`
 	Content *string `json:"content"`
 } {
-	encrypted, err := Encrypt(plaintext)
+	result, err := Encrypt(plaintext)
 	if err != nil {
-		// In sync version, we return empty result on error
 		empty := ""
-		return &struct{
+		return &struct {
 			IV      *string `json:"iv"`
 			Content *string `json:"content"`
-		}{
-			IV:      &empty,
-			Content: &empty,
-		}
+		}{IV: &empty, Content: &empty}
 	}
-	return encrypted
+	return result
 }

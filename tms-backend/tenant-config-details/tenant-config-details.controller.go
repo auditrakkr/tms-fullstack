@@ -1,95 +1,94 @@
 package tenantconfigdetails
 
 import (
+	"net/http"
 	"strconv"
 
 	dto "github.com/auditrakkr/tms-fullstack/tms-backend/dtos"
+	"github.com/auditrakkr/tms-fullstack/tms-backend/global"
+	"github.com/auditrakkr/tms-fullstack/tms-backend/middleware"
 	"github.com/gin-gonic/gin"
 )
 
-
-type TenantConfigDetailsController struct{
+type TenantConfigDetailsController struct {
 	tenantConfigDetailsService *TenantConfigDetailsService
 }
 
-func NewTenantConfigDetailsController(tenantConfigDetailsService *TenantConfigDetailsService) *TenantConfigDetailsController {
-	return &TenantConfigDetailsController{
-		tenantConfigDetailsService: tenantConfigDetailsService,
-	}
+func NewTenantConfigDetailsController(svc *TenantConfigDetailsService) *TenantConfigDetailsController {
+	return &TenantConfigDetailsController{tenantConfigDetailsService: svc}
 }
 
-
 /* CREATE */
+
 func (tc *TenantConfigDetailsController) CreateTenantConfigDetail(c *gin.Context) {
-	var createTenantConfigDetailDto dto.CreateTenantConfigDetailDto
-	if err := c.ShouldBindJSON(&createTenantConfigDetailDto); err != nil {
-		c.JSON(400, gin.H{"error": "Invalid request payload"})
+	var createDto dto.CreateTenantConfigDetailDto
+	if !middleware.BindAndValidate(c, &createDto) {
 		return
 	}
-	tenantConfigDetail, err := tc.tenantConfigDetailsService.CreateTenantConfigDetail(&createTenantConfigDetailDto)
+	detail, err := tc.tenantConfigDetailsService.CreateTenantConfigDetail(c.Request.Context(), &createDto)
 	if err != nil {
-		c.JSON(500, gin.H{"error": err.Error()})
+		global.RespondWithError(c, err)
 		return
 	}
-	c.JSON(201, gin.H{"tenantConfigDetail": tenantConfigDetail})
+	c.JSON(http.StatusCreated, gin.H{"tenantConfigDetail": detail})
 }
 
 /* UPDATE */
-func (tc *TenantConfigDetailsController) Update(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Params.ByName("id"), 10, 32)
-	if err != nil {
-		c.JSON(400, gin.H{"error": "Invalid tenant config detail ID"})
-		return
-	}
-	var updateTenantConfigDetailDto dto.CreateTenantConfigDetailDto
-	if err := c.ShouldBindJSON(&updateTenantConfigDetailDto); err != nil {
-		c.JSON(400, gin.H{"error": "Invalid request payload"})
-		return
-	}
-	tenantConfigDetail, err := tc.tenantConfigDetailsService.Update(uint(id), &updateTenantConfigDetailDto)
-	if err != nil {
-		c.JSON(500, gin.H{"error": err.Error()})
-		return
-	}
-	c.JSON(200, gin.H{"tenantConfigDetail": tenantConfigDetail})
 
+func (tc *TenantConfigDetailsController) Update(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid tenant config detail ID"})
+		return
+	}
+	var updateDto dto.CreateTenantConfigDetailDto
+	if !middleware.BindAndValidate(c, &updateDto) {
+		return
+	}
+	detail, err := tc.tenantConfigDetailsService.Update(c.Request.Context(), uint(id), &updateDto)
+	if err != nil {
+		global.RespondWithError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"tenantConfigDetail": detail})
 }
 
 /* FIND */
-func (tc *TenantConfigDetailsController) GetAllTenantConfigDetails (c *gin.Context) {
-	tenantConfigDetails, err := tc.tenantConfigDetailsService.GetAllTenantConfigDetails()
+
+func (tc *TenantConfigDetailsController) GetAllTenantConfigDetails(c *gin.Context) {
+	details, err := tc.tenantConfigDetailsService.GetAllTenantConfigDetails(c.Request.Context())
 	if err != nil {
-		c.JSON(500, gin.H{"error": err.Error()})
+		global.RespondWithError(c, err)
 		return
 	}
-	c.JSON(200, gin.H{"tenantConfigDetails": tenantConfigDetails})
+	c.JSON(http.StatusOK, gin.H{"tenantConfigDetails": details})
 }
 
 func (tc *TenantConfigDetailsController) FindOne(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Params.ByName("id"), 10, 32)
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
-		c.JSON(400, gin.H{"error": "Invalid tenant config detail ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid tenant config detail ID"})
 		return
 	}
-	tenantConfigDetail, err := tc.tenantConfigDetailsService.FindOne(uint(id))
+	detail, err := tc.tenantConfigDetailsService.FindOne(c.Request.Context(), uint(id))
 	if err != nil {
-		c.JSON(500, gin.H{"error": err.Error()})
+		global.RespondWithError(c, err)
 		return
 	}
-	c.JSON(200, gin.H{"tenantConfigDetail": tenantConfigDetail})
+	c.JSON(http.StatusOK, gin.H{"tenantConfigDetail": detail})
 }
 
 /* DELETE */
+
 func (tc *TenantConfigDetailsController) Delete(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Params.ByName("id"), 10, 32)
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
-		c.JSON(400, gin.H{"error": "Invalid tenant config detail ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid tenant config detail ID"})
 		return
 	}
-	err = tc.tenantConfigDetailsService.Delete(uint(id))
-	if err != nil {
-		c.JSON(500, gin.H{"error": err.Error()})
+	if err := tc.tenantConfigDetailsService.Delete(c.Request.Context(), uint(id)); err != nil {
+		global.RespondWithError(c, err)
 		return
 	}
-	c.JSON(200, gin.H{"message": "Tenant config detail deleted successfully"})
+	c.JSON(http.StatusOK, gin.H{"message": "Tenant config detail deleted successfully"})
 }

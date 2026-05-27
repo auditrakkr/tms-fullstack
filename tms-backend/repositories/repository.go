@@ -6,51 +6,28 @@ import (
 	"gorm.io/gorm"
 )
 
-// Generic Repository
-type Repository[T any] struct {
-	DB *gorm.DB // Assuming DB is a gorm.DB instance
-	// Add any other fields you need for your repository
+// GormRepository is the concrete GORM-backed implementation of Repository[T].
+// Services declare their repo fields using the Repository[T] interface so they
+// can be tested with fakes; constructors wire in *GormRepository[T].
+type GormRepository[T any] struct {
+	DB *gorm.DB
 }
 
-// Constructor function for Repository
-func NewRepository[T any](db *gorm.DB) *Repository[T] {
-	return &Repository[T]{DB: db}
+// NewRepository constructs a GormRepository for the given type T.
+func NewRepository[T any](db *gorm.DB) *GormRepository[T] {
+	return &GormRepository[T]{DB: db}
 }
 
-// Create a new record
-func (r *Repository[T]) Create(entity *T) (*T, error) {
-	err := r.DB.Create(&entity).Error
-	return entity, err
-}
-
-// Find a record by ID
-func (r *Repository[T]) FindByID(id uint) (*T, error) {
-	var entity T
-	err := r.DB.First(&entity, id).Error
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, err // Return error to signal "not found"
-		}
+func (r *GormRepository[T]) Create(entity *T) (*T, error) {
+	if err := r.DB.Create(entity).Error; err != nil {
 		return nil, err
 	}
-	return &entity, nil
+	return entity, nil
 }
 
-// Get all records
-func (r *Repository[T]) FindAll() ([]T, error) {
-	var entities []T
-	err := r.DB.Find(&entities).Error
-	if err != nil {
-		return nil, err
-	}
-	return entities, nil
-}
-
-// FindOne - Find a single record based on conditions
-func (r *Repository[T]) FindOne(condition map[string]any) (*T, error) {
+func (r *GormRepository[T]) FindByID(id uint) (*T, error) {
 	var entity T
-	err := r.DB.Where(condition).First(&entity).Error
-	if err != nil {
+	if err := r.DB.First(&entity, id).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, err
 		}
@@ -59,12 +36,30 @@ func (r *Repository[T]) FindOne(condition map[string]any) (*T, error) {
 	return &entity, nil
 }
 
-// Update a record
-func (r *Repository[T]) Update(entity *T) error {
-	return r.DB.Model(&entity).Updates(entity).Error
+func (r *GormRepository[T]) FindAll() ([]T, error) {
+	var entities []T
+	if err := r.DB.Find(&entities).Error; err != nil {
+		return nil, err
+	}
+	return entities, nil
 }
 
-func (r *Repository[T]) Delete(id uint) error {
+func (r *GormRepository[T]) FindOne(condition map[string]any) (*T, error) {
+	var entity T
+	if err := r.DB.Where(condition).First(&entity).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, err
+		}
+		return nil, err
+	}
+	return &entity, nil
+}
+
+func (r *GormRepository[T]) Update(entity *T) error {
+	return r.DB.Model(entity).Updates(entity).Error
+}
+
+func (r *GormRepository[T]) Delete(id uint) error {
 	result := r.DB.Delete(new(T), id)
 	if result.Error != nil {
 		return result.Error
@@ -75,46 +70,44 @@ func (r *Repository[T]) Delete(id uint) error {
 	return nil
 }
 
-// CreateQueryBuilder - Returns a query instance to build custom queries
-func (r *Repository[T]) CreateQueryBuilder() *gorm.DB {
-	var entity T
-	return r.DB.Model(&entity)
+func (r *GormRepository[T]) Save(entity *T) (*T, error) {
+	if err := r.DB.Save(entity).Error; err != nil {
+		return nil, err
+	}
+	return entity, nil
 }
 
-// Save (Create or Update)
-func (r *Repository[T]) Save(entity *T) (*T, error) {
-	err := r.DB.Save(entity).Error
-	return entity, err
-}
-
-// Find - Find multiple records based on conditions
-func (r *Repository[T]) Find(condition map[string]any) ([]T, error) {
+func (r *GormRepository[T]) Find(condition map[string]any) ([]T, error) {
 	var entities []T
-	err := r.DB.Where(condition).Find(&entities).Error
-	if err != nil {
+	if err := r.DB.Where(condition).Find(&entities).Error; err != nil {
 		return nil, err
 	}
 	return entities, nil
 }
 
-// FindAndCount - Find records and return the count
-func (r *Repository[T]) FindAndCount(condition map[string]any) ([]T, int64, error) {
+// FindAndCount runs count and find as separate queries on the same conditions,
+// avoiding the GORM v2 bug where chaining Count after Find is a no-op.
+func (r *GormRepository[T]) FindAndCount(condition map[string]any) ([]T, int64, error) {
 	var entities []T
 	var count int64
 
-	query := r.DB.Where(condition)
-	err := query.Find(&entities).Count(&count).Error
-	if err != nil {
+	base := r.DB.Model(new(T)).Where(condition)
+	if err := base.Count(&count).Error; err != nil {
+		return nil, 0, err
+	}
+	if err := base.Find(&entities).Error; err != nil {
 		return nil, 0, err
 	}
 	return entities, count, nil
 }
 
-// Remove - Deletes an entity
-func (r *Repository[T]) Remove(entity *T) (T, error) {
-	err := r.DB.Delete(entity).Error
-	if err != nil {
+func (r *GormRepository[T]) Remove(entity *T) (T, error) {
+	if err := r.DB.Delete(entity).Error; err != nil {
 		return *new(T), err
 	}
 	return *entity, nil
+}
+
+func (r *GormRepository[T]) CreateQueryBuilder() *gorm.DB {
+	return r.DB.Model(new(T))
 }

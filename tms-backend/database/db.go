@@ -3,7 +3,8 @@ package database
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
+	"os"
 
 	"github.com/auditrakkr/tms-fullstack/tms-backend/config"
 	"github.com/auditrakkr/tms-fullstack/tms-backend/models"
@@ -13,76 +14,67 @@ import (
 )
 
 var (
-	DB *gorm.DB
+	DB    *gorm.DB
 	Redis *redis.Client
 	Cache *RedisCache
-	ctx = context.Background()
 )
 
 func ConnectDB() {
 	cfg := config.AppConfig
 
-	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%d sslmode=disable",
-		cfg.Postgres.Host, cfg.Postgres.User, cfg.Postgres.Password, cfg.Postgres.DB, cfg.Postgres.Port)
+	dsn := fmt.Sprintf(
+		"host=%s user=%s password=%s dbname=%s port=%d sslmode=disable",
+		cfg.Postgres.Host, cfg.Postgres.User, cfg.Postgres.Password,
+		cfg.Postgres.DB, cfg.Postgres.Port,
+	)
 
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
-		log.Fatalf("Failed to connect to database: %v", err)
+		slog.Error("failed to connect to PostgreSQL", "error", err)
+		os.Exit(1)
+	}
+	DB = db
+
+	// Redis — non-fatal if unavailable.
+	Redis = redis.NewClient(&redis.Options{
+		Addr:     fmt.Sprintf("%s:%d", cfg.Redis.Host, cfg.Redis.Port),
+		Password: cfg.Redis.Password,
+		DB:       0,
+	})
+	if _, err := Redis.Ping(context.Background()).Result(); err != nil {
+		slog.Warn("redis unavailable — caching disabled", "error", err)
+		Redis = nil
+		Cache = nil
+	} else {
+		slog.Info("connected to Redis")
+		Cache = NewRedisCache(Redis)
 	}
 
-	// Assign the db instance to the global DB variable
-    DB = db
-
-	//Connect to Redis for caching
-	Redis  = redis.NewClient(&redis.Options{
-		Addr: fmt.Sprintf("%s:%d", cfg.Redis.Host, cfg.Redis.Port),
-		Password: cfg.Redis.Password,
-		DB: 0, // use default DB
-	})
-
-	// Test Redis connection
-    _, err = Redis.Ping(ctx).Result()
-    if err != nil {
-        log.Printf("Warning: Failed to connect to Redis cache: %v", err)
-        log.Println("Continuing without cache functionality...")
-        Redis = nil
-        Cache = nil
-    } else {
-        log.Println("Connected to Redis cache successfully")
-		// Initialize the cache wrapper
-        Cache = NewRedisCache(Redis)
-    }
-
-	// Create the enum type if it doesn't exist
-	err = DB.Exec(`
+	// Create PostgreSQL enum types if they don't exist.
+	if err := DB.Exec(`
 		DO $$
 		BEGIN
 			IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'gender') THEN
 				CREATE TYPE gender AS ENUM ('male', 'female');
 			END IF;
-
 			IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'tenant_status') THEN
 				CREATE TYPE tenant_status AS ENUM ('active', 'suspended', 'owing');
 			END IF;
-
 			IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'tenant_team_role') THEN
 				CREATE TYPE tenant_team_role AS ENUM ('Admin', 'Manager', 'Employee');
 			END IF;
-
 			IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'tenant_account_officer_role') THEN
 				CREATE TYPE tenant_account_officer_role AS ENUM ('Account Officer Manager', 'Account Officer Tech-Support');
 			END IF;
-
 			IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'theme_type') THEN
 				CREATE TYPE theme_type AS ENUM ('standard', 'auditrakkr');
 			END IF;
 		END $$;
-	`).Error
-	if err != nil {
-		log.Fatalf("Failed to create enum type: %v", err)
+	`).Error; err != nil {
+		slog.Error("failed to create enum types", "error", err)
+		os.Exit(1)
 	}
 
-	// Ensure uuid-ossp extension is available
 	DB.Exec("CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";")
 
 	if err := DB.AutoMigrate(
@@ -98,39 +90,25 @@ func ConnectDB() {
 		&models.Theme{},
 		&models.FacebookProfile{},
 		&models.GoogleProfile{},
-		); err != nil {
-		log.Fatalf("Failed to migrate database: %v", err)
+	); err != nil {
+		slog.Error("auto-migrate failed", "error", err)
+		os.Exit(1)
 	}
 
-
-	log.Println("Connected to PostgreSQL database successfully")
+	slog.Info("connected to PostgreSQL and migrations applied")
 }
 
 func CloseDB() {
 	if DB != nil {
 		sqlDB, err := DB.DB()
-		if err != nil {
-			log.Fatalf("Failed to get database connection: %v", err)
+		if err == nil {
+			sqlDB.Close()
 		}
-		if err := sqlDB.Close(); err != nil {
-			log.Fatalf("Failed to close database connection: %v", err)
-		}
-		log.Println("Database connection closed")
+		slog.Info("PostgreSQL connection closed")
 	}
-
-	// Close the Redis client
 	if Redis != nil {
-		if err := Redis.Close(); err != nil {
-			log.Fatalf("Failed to close Redis connection: %v", err)
-		}
-		log.Println("Redis connection closed")
+		Redis.Close()
+		slog.Info("Redis connection closed")
 		Cache = nil
 	}
-
 }
-
-/* func SetCache(key string, value interface{}) error {
-	if Cache == nil {
-
-	}
-} */

@@ -5,7 +5,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - /home/somanwokoye/data/postgres:/data/postgres
+      - ./data/postgres:/var/lib/postgresql/data
     env_file:
       - docker.env
 
@@ -22,28 +22,28 @@ services:
         hard: -1
     ports:
       - "9200:9200"
-    # volumes:
-    #   - data/es01:/usr/share/elasticsearch/data
+    volumes:
+      - ./data/es01:/usr/share/elasticsearch/data
 
   redis-master:
     image: redis:alpine
     container_name: redis-master
     ports:
-      - "6379:6379"
+      - "6381:6381"
     environment:
       - REDIS_REPLICATION_MODE=master
       - REDIS_PASSWORD=my_master_password
     volumes:
-      - /home/somanwokoye/data/redis:/var/lib/redis
+      - ./data/redis:/var/lib/redis
 
   redis-slave:
     image: redis:alpine
     ports:
-      - "6379"
+      - "6381"
     environment:
       - REDIS_REPLICATION_MODE=slave
       - REDIS_MASTER_HOST=redis-master
-      - REDIS_MASTER_PORT=6379
+      - REDIS_MASTER_PORT=6381
       - REDIS_MASTER_PASSWORD=my_master_password
       - REDIS_PASSWORD=my_slave_password
     depends_on:

@@ -1,32 +1,33 @@
 package roles
 
 import (
+	"context"
 	"fmt"
 
-	"github.com/auditrakkr/tms-fullstack/tms-backend/database"
 	dto "github.com/auditrakkr/tms-fullstack/tms-backend/dtos"
 	"github.com/auditrakkr/tms-fullstack/tms-backend/models"
 	"github.com/auditrakkr/tms-fullstack/tms-backend/repositories"
 	"github.com/jinzhu/copier"
+	"gorm.io/gorm"
 )
 
 type RoleService struct {
 	roleRepo repositories.Repository[models.Role]
 }
 
-func NewRoleService() *RoleService {
+func NewRoleService(db *gorm.DB) *RoleService {
 	return &RoleService{
-		roleRepo: repositories.Repository[models.Role]{DB: database.DB},
+		roleRepo: repositories.NewRepository[models.Role](db),
 	}
 }
 
 /* CREATE */
-func (s *RoleService) CreateRole(createRoleDto *dto.CreateUserDto) (*models.Role, error) {
+
+func (s *RoleService) CreateRole(ctx context.Context, createRoleDto *dto.CreateRoleDto) (*models.Role, error) {
 	newRole := &models.Role{}
 	if err := copier.Copy(newRole, createRoleDto); err != nil {
 		return nil, fmt.Errorf("failed to map dto: %v", err)
 	}
-
 	newRole, err := s.roleRepo.Create(newRole)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create role: %v", err)
@@ -35,24 +36,22 @@ func (s *RoleService) CreateRole(createRoleDto *dto.CreateUserDto) (*models.Role
 }
 
 /* UPDATE */
-func (s *RoleService) Update(roleId uint, updateRoleDto *dto.UpdateUserDto) (*models.Role, error) {
+
+func (s *RoleService) Update(ctx context.Context, roleId uint, updateRoleDto *dto.UpdateRoleDto) (*models.Role, error) {
 	role, err := s.roleRepo.FindByID(roleId)
 	if err != nil {
 		return nil, fmt.Errorf("failed to find role: %v", err)
 	}
-
 	if err := copier.Copy(role, updateRoleDto); err != nil {
 		return nil, fmt.Errorf("failed to map dto: %v", err)
 	}
-
-	err = s.roleRepo.Update(role)
-	if err != nil {
+	if err := s.roleRepo.Update(role); err != nil {
 		return nil, fmt.Errorf("failed to update role: %v", err)
 	}
 	return role, nil
 }
 
-func (s *RoleService) Save (role *models.Role) (*models.Role, error) {
+func (s *RoleService) Save(ctx context.Context, role *models.Role) (*models.Role, error) {
 	role, err := s.roleRepo.Save(role)
 	if err != nil {
 		return nil, fmt.Errorf("failed to save role: %v", err)
@@ -62,50 +61,43 @@ func (s *RoleService) Save (role *models.Role) (*models.Role, error) {
 
 /* DELETE */
 
-func (s *RoleService) Delete(roleId uint) error {
-	err := s.roleRepo.Delete(roleId)
-	if err != nil {
+func (s *RoleService) Delete(ctx context.Context, roleId uint) error {
+	if err := s.roleRepo.Delete(roleId); err != nil {
 		return fmt.Errorf("failed to delete role: %v", err)
 	}
 	return nil
 }
 
-func (s *RoleService) Remove (role *models.Role) (*models.Role, error) {
-	removedRole, err := s.roleRepo.Remove(role)
+func (s *RoleService) Remove(ctx context.Context, role *models.Role) (*models.Role, error) {
+	removed, err := s.roleRepo.Remove(role)
 	if err != nil {
 		return nil, fmt.Errorf("failed to remove role: %v", err)
 	}
-	return &removedRole, nil
+	return &removed, nil
 }
 
 /* READ */
-func (s *RoleService) FindAllWithOptions(findOptions map[string]any) ([]models.Role, int64, error) {
-	roles, totalCount, err := s.roleRepo.FindAndCount(findOptions)
+
+func (s *RoleService) FindAllWithOptions(ctx context.Context, findOptions map[string]any) ([]models.Role, int64, error) {
+	roles, total, err := s.roleRepo.FindAndCount(findOptions)
 	if err != nil {
-		return nil, 0, fmt.Errorf("failed to get all roles with options: %w", err)
+		return nil, 0, fmt.Errorf("failed to get roles: %w", err)
 	}
-	return roles, totalCount, nil
+	return roles, total, nil
 }
 
-func (s *RoleService) GetAllRoles() ([]models.Role, error) {
+func (s *RoleService) GetAllRoles(ctx context.Context) ([]models.Role, error) {
 	roles, err := s.roleRepo.FindAll()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get all roles: %w", err)
+		return nil, fmt.Errorf("failed to get roles: %w", err)
 	}
 	return roles, nil
 }
 
-func (s *RoleService) FindOne (roleId uint) (*models.Role, error) {
+func (s *RoleService) FindOne(ctx context.Context, roleId uint) (*models.Role, error) {
 	role, err := s.roleRepo.FindByID(roleId)
 	if err != nil {
 		return nil, fmt.Errorf("failed to find role: %v", err)
 	}
-	if role == nil {
-		return nil, fmt.Errorf("role not found")
-	}
 	return role, nil
 }
-
-
-
-
